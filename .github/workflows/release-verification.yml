@@ -105,6 +105,42 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          backend_id=""
+          print_backend_diagnostics() {
+            echo 'Backend container status:'
+            if [ -n "$backend_id" ]; then
+              docker inspect -f 'state={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$backend_id" 2>&1 || true
+              echo 'Backend required configuration (values withheld):'
+              docker exec "$backend_id" sh -ec '
+          for name in MONGODB_URI MONGODB_DATABASE CORS_ORIGIN; do
+            if printenv "$name" >/dev/null 2>&1; then printf "%s=set\n" "$name"; else printf "%s=missing\n" "$name"; fi
+          done
+          if test -r /run/secrets/staging_jwt_secret; then echo JWT_SECRET_FILE=readable; else echo JWT_SECRET_FILE=unreadable; fi
+          ' 2>&1 || true
+              echo 'Backend readiness endpoint (status only):'
+              docker exec "$backend_id" wget -q -O - http://127.0.0.1:8080/health/ready 2>&1 || echo 'Readiness endpoint unavailable.'
+            fi
+            docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" ps -a backend 2>&1 || true
+            echo 'Backend container logs (last 200 lines; sensitive values redacted):'
+            if ! docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" logs --no-color --tail=200 backend 2>&1 |
+              python3 -c '
+          import re, sys
+          for line in sys.stdin:
+              line = re.sub(r"(?i)(mongodb(?:\+srv)?://)[^/@\s]+:[^/@\s]+@", r"\1[REDACTED]@", line)
+              line = re.sub(r"(?i)([\"\x27]?[\w.-]*(?:password|secret|token|authorization|mongodb_uri|connection_string)[\w.-]*[\"\x27]?\s*[:=]\s*[\"\x27]?)([^\"\x27\s,;}{]+)([\"\x27]?)", r"\1[REDACTED]\3", line)
+              sys.stdout.write(line)
+          '; then
+              echo 'Unable to retrieve backend container logs.' >&2
+            fi
+          }
+          report_backend_gate_error() {
+            local exit_code=$?
+            trap - ERR
+            printf 'Backend Compose gate command failed (exit %s): %s\n' "$exit_code" "$BASH_COMMAND" >&2
+            print_backend_diagnostics
+            exit "$exit_code"
+          }
+          trap report_backend_gate_error ERR
           cat > "$CC_RUN_DIR/compose.env" <<EOF
           STAGING_BACKEND_IMAGE=cryptoconnect-ci:${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}
           STAGING_CORS_ORIGIN=http://127.0.0.1:5173
@@ -118,19 +154,34 @@ jobs:
           test "$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" config --services)" = backend
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" build backend
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" up -d
+          startup_started=$SECONDS
           for attempt in $(seq 1 90); do
             backend_id=$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" ps -q backend)
             health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$backend_id" 2>/dev/null || true)
-            if [ "$health" = healthy ]; then break; fi
-            if [ "$attempt" -eq 90 ]; then echo 'Compose backend did not become healthy.' >&2; exit 1; fi
+            if [ "$health" = healthy ]; then
+              echo "Compose backend became healthy after $((SECONDS - startup_started)) seconds."
+              break
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              echo "Compose backend did not become healthy after 90 checks ($((SECONDS - startup_started)) seconds); last health state: $health." >&2
+              print_backend_diagnostics
+              trap - ERR
+              exit 1
+            fi
             sleep 2
           done
+          echo 'Checking backend runtime user.'
           test "$(docker inspect -f '{{.Config.User}}' "$backend_id")" = '10001:10001'
+          echo 'Checking backend has no host-published ports.'
           test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$backend_id" | grep -v 'null' || true)"
+          echo 'Checking backend can read its mounted JWT secret.'
           docker exec --user 10001:10001 "$backend_id" sh -ec 'test -r /run/secrets/staging_jwt_secret'
+          echo 'Checking MongoDB has no host-published ports.'
           test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$CC_MONGO_CONTAINER" | grep -v 'null' || true)"
+          echo 'Checking backend and MongoDB each use only the private edge network.'
           test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | wc -l)" -eq 1
           test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | wc -l)" -eq 1
+          echo 'Checking backend and MongoDB are attached to the expected private edge network.'
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | grep -Fx "$CC_EDGE"
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | grep -Fx "$CC_EDGE"
 
