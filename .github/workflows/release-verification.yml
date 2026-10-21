@@ -179,8 +179,8 @@ jobs:
           echo 'Checking MongoDB has no host-published ports.'
           test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$CC_MONGO_CONTAINER" | grep -v 'null' || true)"
           echo 'Checking backend and MongoDB each use only the private edge network.'
-          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | wc -l)" -eq 1
-          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | wc -l)" -eq 1
+          test "$(docker inspect -f '{{len .NetworkSettings.Networks}}' "$backend_id")" -eq 1
+          test "$(docker inspect -f '{{len .NetworkSettings.Networks}}' "$CC_MONGO_CONTAINER")" -eq 1
           echo 'Checking backend and MongoDB are attached to the expected private edge network.'
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | grep -Fx "$CC_EDGE"
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | grep -Fx "$CC_EDGE"
@@ -206,7 +206,7 @@ jobs:
           docker run -d --name "$CC_PROJECT-proxy" --network "$CC_EDGE" \
             --publish 127.0.0.1:18080:8080 \
             --mount "type=bind,src=$CC_RUN_DIR/nginx.conf,dst=/etc/nginx/conf.d/default.conf,readonly" nginx:alpine >/dev/null
-          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_PROJECT-proxy" | wc -l)" -eq 1
+          test "$(docker inspect -f '{{len .NetworkSettings.Networks}}' "$CC_PROJECT-proxy")" -eq 1
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_PROJECT-proxy" | grep -Fx "$CC_EDGE"
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:18080/health/ready >/dev/null; then break; fi
