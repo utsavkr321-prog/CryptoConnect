@@ -10,7 +10,7 @@ The encryption visualizer remains an educational Web Crypto demo and is not used
 
 ## Current verification status
 
-The PostgreSQL-to-MongoDB code migration is in progress. The current backend unit/web suite passes 84 tests; MongoDB live persistence, Atlas connectivity, browser acceptance, and migration of any existing PostgreSQL data have not been performed. No PostgreSQL data is copied automatically. Historical SQL migration files remain archival only.
+MongoDB is the application's active database. Backend tests include disposable MongoDB persistence/index integration coverage through Testcontainers; the release workflow also runs browser acceptance and an isolated MongoDB backup/restore check. CI never uses Atlas credentials or production data. Historical SQL migration files remain archival only and are not run by the application.
 
 ## Three simple startup commands
 
@@ -38,7 +38,7 @@ To stop any component safely, switch to its terminal and press `Ctrl+C`.
 
 ## Local test database workflow
 
-To run the isolated local test suite against a loopback database, configure `MONGODB_URI` targeting `cryptoconnect_local_test` and run `scripts/start-local-backend.ps1`. It refuses non-loopback hosts and preserves safety guards. PostgreSQL startup scripts and SQL migrations are retained for historical reference and are no longer part of active application startup.
+To run the backend tests, use `mvn test` from `backend/`; the MongoDB integration tests require Docker and start their own disposable MongoDB Testcontainer. To run the backend manually, configure `MONGODB_URI` targeting `cryptoconnect_local_test` and run `scripts/start-local-backend.ps1`. It refuses non-loopback hosts and preserves safety guards.
 
 See [staging deployment preparation](./docs/STAGING_DEPLOYMENT.md), [cryptography](./docs/CRYPTOGRAPHY.md), [architecture](./docs/ARCHITECTURE.md), [API documentation](./docs/API_DOCUMENTATION.md), [implementation status](./docs/IMPLEMENTATION_STATUS.md), [testing](./docs/TESTING.md), and [known limitations](./docs/KNOWN_LIMITATIONS.md).
 
@@ -46,5 +46,4 @@ The backend exposes `/health/live` for process liveness and `/health/ready` for 
 
 ## Backend configuration
 
-`MONGODB_URI` and `JWT_SECRET` are required at backend startup. `MONGODB_DATABASE` defaults to `cryptoconnect` (or `cryptoconnect_local_test` for isolated tests). Staging/production must use protected runtime secret storage. MongoDB creates required indexes at startup but does not drop collections or migrate PostgreSQL data.
-
+`MONGODB_URI` and `JWT_SECRET` are required at backend startup. `MONGODB_DATABASE` defaults to `cryptoconnect` (or `cryptoconnect_local_test` for isolated manual development). Staging/production must use protected runtime secret storage. MongoDB creates required indexes at startup but does not drop collections or import historical SQL data.

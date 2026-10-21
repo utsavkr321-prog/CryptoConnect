@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Disposable PostgreSQL 16, Compose, API and browser gates
+    name: MongoDB, Compose, API and browser gates
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -55,57 +55,33 @@ jobs:
           grep -q 'routable HTTPS origin' "$RUNNER_TEMP/invalid-api-url.log"
           VITE_APP_MODE=api VITE_API_URL=https://api.ci.example.test npm run build
 
-      - name: Start disposable PostgreSQL 16 and initialize separate roles
+      - name: Start isolated MongoDB for Compose and restore checks
         shell: bash
         run: |
           set -euo pipefail
           run_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           run_dir="$RUNNER_TEMP/cryptoconnect-${run_id}"
-          pg_name="cc-pg16-it-${run_id}"
+          mongo_name="cc-mongo-${run_id}"
+          edge_name="cc-edge-${run_id}"
           mkdir -m 700 -p "$run_dir"
-          printf 'CC_RUN_DIR=%s\nCC_PG_CONTAINER=%s\nCC_PROJECT=cc-ci-%s\nCC_EDGE=cc-edge-%s\n' \
-            "$run_dir" "$pg_name" "$run_id" "$run_id" >> "$GITHUB_ENV"
-          for secret in postgres-bootstrap app-password migrator-password; do
-            openssl rand -hex 32 > "$run_dir/$secret"
-            chmod 0444 "$run_dir/$secret"
-          done
-          docker run -d --name "$pg_name" \
-            --publish 127.0.0.1:55432:5432 \
-            --env POSTGRES_DB=cryptoconnect_staging \
-            --env POSTGRES_USER=postgres \
-            --env POSTGRES_PASSWORD_FILE=/run/secrets/postgres-bootstrap \
-            --env STAGING_DATABASE_USERNAME=cryptoconnect_app \
-            --env STAGING_DATABASE_PASSWORD_FILE=/run/secrets/app-password \
-            --env STAGING_MIGRATOR_USERNAME=cryptoconnect_migrator \
-            --env STAGING_MIGRATOR_PASSWORD_FILE=/run/secrets/migrator-password \
-            --mount "type=bind,src=$run_dir/postgres-bootstrap,dst=/run/secrets/postgres-bootstrap,readonly" \
-            --mount "type=bind,src=$run_dir/app-password,dst=/run/secrets/app-password,readonly" \
-            --mount "type=bind,src=$run_dir/migrator-password,dst=/run/secrets/migrator-password,readonly" \
-            --mount "type=bind,src=$GITHUB_WORKSPACE/ops/postgres-init/10-create-app-role.sh,dst=/docker-entrypoint-initdb.d/10-create-app-role.sh,readonly" \
-            postgres:16-alpine
+          printf 'CC_RUN_DIR=%s\nCC_MONGO_CONTAINER=%s\nCC_PROJECT=cc-ci-%s\nCC_EDGE=cc-edge-%s\n' \
+            "$run_dir" "$mongo_name" "$run_id" "$run_id" >> "$GITHUB_ENV"
+          openssl rand -hex 32 > "$run_dir/jwt-secret"
+          chmod 0444 "$run_dir/jwt-secret"
+          docker network create "$edge_name" >/dev/null
+          docker run -d --name "$mongo_name" --network "$edge_name" --network-alias cc-mongo mongo:7.0
           for attempt in $(seq 1 60); do
-            if docker exec "$pg_name" pg_isready -U postgres -d cryptoconnect_staging >/dev/null 2>&1; then break; fi
-            if [ "$attempt" -eq 60 ]; then echo 'Disposable PostgreSQL 16 did not become ready.' >&2; exit 1; fi
+            if docker exec "$mongo_name" mongosh --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)' >/dev/null 2>&1; then break; fi
+            if [ "$attempt" -eq 60 ]; then echo 'Disposable MongoDB 7 did not become ready.' >&2; exit 1; fi
             sleep 2
           done
-          docker exec "$pg_name" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc 'show server_version'
+          docker exec "$mongo_name" mongosh --quiet --eval 'db.version()' | grep -E '^7\.'
 
-      - name: Run full backend suite against PostgreSQL 16
+      - name: Run backend suite and MongoDB Testcontainers integration tests
         shell: bash
         run: |
           set -euo pipefail
-          export RUN_POSTGRES_INTEGRATION=true
-          export DATABASE_URL=jdbc:postgresql://127.0.0.1:55432/cryptoconnect_staging
-          export DATABASE_USERNAME=cryptoconnect_app
-          export DATABASE_PASSWORD="$(cat "$CC_RUN_DIR/app-password")"
-          export SPRING_FLYWAY_URL="$DATABASE_URL"
-          export SPRING_FLYWAY_USER=cryptoconnect_migrator
-          export SPRING_FLYWAY_PASSWORD="$(cat "$CC_RUN_DIR/migrator-password")"
-          export JWT_SECRET="$(openssl rand -base64 48)"
-          set +e
           (cd backend && mvn -B -ntp clean package)
-          mvn_status=$?
-          set -e
           python3 - <<'PY'
           import glob, sys, xml.etree.ElementTree as ET
           files = glob.glob('backend/target/surefire-reports/TEST-*.xml')
@@ -117,38 +93,29 @@ jobs:
               for suite in suites:
                   for key in totals:
                       totals[key] += int(suite.attrib.get(key, 0))
-                  if 'PostgresMessagingIntegrationTest' in suite.attrib.get('name', ''):
+                  if 'MongoPersistenceIntegrationTest' in suite.attrib.get('name', ''):
                       integration += int(suite.attrib.get('tests', 0)) - int(suite.attrib.get('skipped', 0))
           passed = totals['tests'] - totals['failures'] - totals['errors'] - totals['skipped']
-          print(f"Backend: {totals['tests']} tests, {passed} passed, {totals['failures']} failed, {totals['errors']} errors, {totals['skipped']} skipped; PostgreSQL integration executed={integration}")
+          print(f"Backend: {totals['tests']} tests, {passed} passed, {totals['failures']} failed, {totals['errors']} errors, {totals['skipped']} skipped; MongoDB integration executed={integration}")
           if not files or totals['failures'] or totals['errors'] or totals['skipped'] or integration < 2:
               sys.exit(1)
           PY
-          test "$(docker exec "$CC_PG_CONTAINER" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc "select (select not rolsuper and not rolcreatedb and not rolcreaterole and not rolreplication and not rolbypassrls from pg_roles where rolname='cryptoconnect_migrator') and has_schema_privilege('cryptoconnect_migrator','public','CREATE') and has_table_privilege('cryptoconnect_app','users','SELECT') and not has_table_privilege('cryptoconnect_app','flyway_schema_history','INSERT')")" = t
-          unset DATABASE_PASSWORD SPRING_FLYWAY_PASSWORD JWT_SECRET
-          exit "$mvn_status"
 
       - name: Validate and build the actual staging Compose model
         shell: bash
         run: |
           set -euo pipefail
-          for secret in postgres-bootstrap app-password migrator-password jwt-secret; do
-            if [ ! -f "$CC_RUN_DIR/$secret" ]; then openssl rand -hex 32 > "$CC_RUN_DIR/$secret"; fi
-            chmod 0444 "$CC_RUN_DIR/$secret"
-          done
           cat > "$CC_RUN_DIR/compose.env" <<EOF
           STAGING_BACKEND_IMAGE=cryptoconnect-ci:${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}
           STAGING_CORS_ORIGIN=http://127.0.0.1:5173
           STAGING_PROXY_NETWORK=$CC_EDGE
-          STAGING_DATABASE_VOLUME=cc-ci-data-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}
-          STAGING_POSTGRES_BOOTSTRAP_PASSWORD_FILE=$CC_RUN_DIR/postgres-bootstrap
-          STAGING_DATABASE_PASSWORD_FILE=$CC_RUN_DIR/app-password
-          STAGING_MIGRATOR_PASSWORD_FILE=$CC_RUN_DIR/migrator-password
+          STAGING_MONGODB_URI=mongodb://cc-mongo:27017/cryptoconnect_staging?directConnection=true
+          STAGING_MONGODB_DATABASE=cryptoconnect_staging
           STAGING_JWT_SECRET_FILE=$CC_RUN_DIR/jwt-secret
           EOF
           chmod 0600 "$CC_RUN_DIR/compose.env"
-          docker network create "$CC_EDGE" >/dev/null
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" config --quiet
+          test "$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" config --services)" = backend
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" build backend
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" up -d
           for attempt in $(seq 1 90); do
@@ -158,20 +125,14 @@ jobs:
             if [ "$attempt" -eq 90 ]; then echo 'Compose backend did not become healthy.' >&2; exit 1; fi
             sleep 2
           done
-          db_id=$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" ps -q postgres)
           test "$(docker inspect -f '{{.Config.User}}' "$backend_id")" = '10001:10001'
           test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$backend_id" | grep -v 'null' || true)"
-          test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$db_id" | grep -v 'null' || true)"
-          docker exec --user 10001:10001 "$backend_id" sh -ec 'test -r /run/secrets/staging_database_password && test -r /run/secrets/staging_migrator_password && test -r /run/secrets/staging_jwt_secret'
-          test "$(docker exec "$db_id" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc "select current_setting('server_version_num') like '16%'")" = t
-          test "$(docker inspect -f '{{.State.Health.Status}}' "$db_id")" = healthy
-          test "$(docker exec "$db_id" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc "select count(*) from flyway_schema_history where success and version in ('1','2','3','4','5','6','7')")" = 7
-          test "$(docker exec "$db_id" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc "select (select not rolsuper and not rolcreatedb and not rolcreaterole from pg_roles where rolname='cryptoconnect_app') and not has_schema_privilege('cryptoconnect_app','public','CREATE') and not has_table_privilege('cryptoconnect_app','flyway_schema_history','INSERT')")" = t
-          test "$(docker exec "$db_id" psql --no-psqlrc -U postgres -d cryptoconnect_staging -Atc "select (select not rolsuper and not rolcreatedb and not rolcreaterole and not rolreplication and not rolbypassrls from pg_roles where rolname='cryptoconnect_migrator') and has_schema_privilege('cryptoconnect_migrator','public','CREATE') and has_table_privilege('cryptoconnect_app','users','SELECT')")" = t
-          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | wc -l)" -eq 2
-          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$db_id" | wc -l)" -eq 1
+          docker exec --user 10001:10001 "$backend_id" sh -ec 'test -r /run/secrets/staging_jwt_secret'
+          test -z "$(docker inspect -f '{{json .NetworkSettings.Ports}}' "$CC_MONGO_CONTAINER" | grep -v 'null' || true)"
+          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | wc -l)" -eq 1
+          test "$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | wc -l)" -eq 1
           docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$backend_id" | grep -Fx "$CC_EDGE"
-          docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$db_id" | grep -Fx "${CC_PROJECT}_database"
+          docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$CC_MONGO_CONTAINER" | grep -Fx "$CC_EDGE"
 
       - name: Run two-profile browser acceptance against the Compose stack
         shell: bash
@@ -222,25 +183,21 @@ jobs:
             CC_COMPOSE_FILE=docker-compose.staging.yml \
             "$CC_RUN_DIR/playwright/node_modules/.bin/playwright" test tests/e2e/release-acceptance.spec.cjs --workers=1 --reporter=line
 
-      - name: Verify backup restore by running the app against the restored database
+      - name: Verify MongoDB backup restore by running the app against the restored database
         shell: bash
         run: |
           set -euo pipefail
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" stop -t 40 backend
-          docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" exec -T postgres pg_dump -U postgres -d cryptoconnect_staging -Fc > "$CC_RUN_DIR/staging.dump"
-          test -s "$CC_RUN_DIR/staging.dump"
-          db_id=$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" ps -q postgres)
-          docker cp "$CC_RUN_DIR/staging.dump" "$db_id:/tmp/cc-restore.dump"
-          docker exec "$db_id" pg_restore --list /tmp/cc-restore.dump >/dev/null
-          docker exec "$db_id" createdb -U postgres -O cryptoconnect_migrator cryptoconnect_restore
-          docker exec "$db_id" pg_restore -U postgres -d cryptoconnect_restore --no-owner --role=cryptoconnect_migrator /tmp/cc-restore.dump
-          test "$(docker exec "$db_id" psql --no-psqlrc -U postgres -d cryptoconnect_restore -Atc "select count(*) from flyway_schema_history where success and version in ('1','2','3','4','5','6','7')")" = 7
+          docker exec "$CC_MONGO_CONTAINER" mongodump --db cryptoconnect_staging --archive=/tmp/cc-staging.archive
+          docker cp "$CC_MONGO_CONTAINER:/tmp/cc-staging.archive" "$CC_RUN_DIR/staging.archive"
+          test -s "$CC_RUN_DIR/staging.archive"
+          docker exec "$CC_MONGO_CONTAINER" mongorestore --archive=/tmp/cc-staging.archive --nsFrom='cryptoconnect_staging.*' --nsTo='cryptoconnect_restore.*'
           cat > "$CC_RUN_DIR/restore.override.yml" <<'EOF'
           services:
             backend:
               environment:
-                DATABASE_URL: jdbc:postgresql://postgres:5432/cryptoconnect_restore
-                SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/cryptoconnect_restore
+                MONGODB_URI: mongodb://cc-mongo:27017/cryptoconnect_restore?directConnection=true
+                MONGODB_DATABASE: cryptoconnect_restore
           EOF
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -f "$CC_RUN_DIR/restore.override.yml" -p "$CC_PROJECT" up -d --no-deps backend
           for attempt in $(seq 1 90); do
@@ -266,6 +223,6 @@ jobs:
             docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" down -v --remove-orphans
             docker rm -f "$CC_PROJECT-proxy" >/dev/null 2>&1
           fi
-          if [ -n "${CC_PG_CONTAINER:-}" ]; then docker rm -fv "$CC_PG_CONTAINER" >/dev/null 2>&1; fi
+          if [ -n "${CC_MONGO_CONTAINER:-}" ]; then docker rm -fv "$CC_MONGO_CONTAINER" >/dev/null 2>&1; fi
           if [ -n "${CC_EDGE:-}" ]; then docker network rm "$CC_EDGE" >/dev/null 2>&1; fi
           if [ -n "${CC_RUN_DIR:-}" ] && [[ "$CC_RUN_DIR" == "$RUNNER_TEMP"/cryptoconnect-* ]]; then rm -rf -- "$CC_RUN_DIR"; fi

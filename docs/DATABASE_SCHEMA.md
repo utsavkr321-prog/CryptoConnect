@@ -16,4 +16,7 @@ Authorization derives conversation membership from participant IDs in the conver
 
 The SQL files in `backend/src/main/resources/db/migration` are retained as historical PostgreSQL artifacts. Flyway is not on the runtime classpath, these scripts do not run, and no PostgreSQL-to-MongoDB data migration is implemented. Existing PostgreSQL data is not copied or modified.
 
-Live MongoDB integration tests require a separately configured disposable local test instance. Standard unit/web tests do not contact MongoDB. Atlas connectivity and existing-data migration are not verified.
+MongoDB persistence and unique-index integration tests use a disposable MongoDB Testcontainer. The
+release workflow additionally exercises the backend against a private disposable MongoDB instance
+and tests backup/restore using synthetic browser data. Neither test path contacts Atlas. Atlas
+connectivity and migration of any historical SQL data are not verified.

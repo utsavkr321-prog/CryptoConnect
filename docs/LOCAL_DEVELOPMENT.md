@@ -10,7 +10,7 @@ In a PowerShell session, set `MONGODB_URI` to the existing local database URI wh
 ./scripts/start-local-backend.ps1
 ```
 
-The script accepts only `localhost` or `127.0.0.1` and the `cryptoconnect_local_test` database, refuses an occupied port 8080, does not read `.env`, and never prints the URI. It does not start a database process. On startup the app pings MongoDB and ensures required indexes. It does not import PostgreSQL data.
+The script accepts only `localhost` or `127.0.0.1` and the `cryptoconnect_local_test` database, refuses an occupied port 8080, does not read `.env`, and never prints the URI. It does not start a database process. On startup the app pings MongoDB and ensures required indexes.
 
 The default API origin is `http://127.0.0.1:8080`; authenticated WebSocket uses the matching `ws://127.0.0.1:8080/ws`. Readiness is `/health/ready`; liveness is `/health/live`.
 
@@ -31,9 +31,5 @@ configured MongoDB Atlas endpoint or an existing local MongoDB service. This che
 initialize, reset, or seed a database. The local backend still requires an existing loopback
 MongoDB instance and `MONGODB_URI` targeting `cryptoconnect_local_test`.
 
-`.\scripts\start-local-db.ps1` is a legacy PostgreSQL 18 cluster launcher, not the MongoDB startup
-command. Do not use it for current local application development.
-
-## Historical PostgreSQL artifacts
-
-PostgreSQL startup helpers, SQL migrations, and reports from the prior architecture remain in the repository for historical reference. They are not used by the current backend. Do not run a PostgreSQL helper as part of MongoDB local development. No PostgreSQL cluster, including port 5432, is needed for these steps.
+The automated MongoDB integration tests run through Testcontainers with Docker; they do not use the
+manual development URI or any Atlas account.
