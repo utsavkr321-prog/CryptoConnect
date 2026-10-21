@@ -1,0 +1,2 @@
+alter table encrypted_messages drop constraint if exists encrypted_messages_sender_id_client_message_id_key;
+alter table encrypted_messages add constraint encrypted_messages_conversation_sender_client_key unique (conversation_id, sender_id, client_message_id);

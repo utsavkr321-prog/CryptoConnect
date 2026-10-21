@@ -1,0 +1,376 @@
+{
+  "date": "2026-10-19",
+  "scope": "CryptoConnect final staging readiness re-audit; Option B server-readable messaging",
+  "verdict": "NOT READY FOR STAGING",
+  "architecture": {
+    "model": "conventional_server_readable_text",
+    "e2ee": false,
+    "new_message_format": "TEXT",
+    "max_message_characters": 4000,
+    "legacy_format": "LEGACY_ENCRYPTED",
+    "legacy_content_recoverable": false,
+    "legacy_ciphertext_returned_by_api": false,
+    "flyway_migration": "V7__server_readable_messages.sql"
+  },
+  "audit": {
+    "status": "CURRENT_REAUDIT_WITH_FRONTEND_BUILD_PASS_AND_REQUIRED_INFRASTRUCTURE_BLOCKERS",
+    "current_workspace_reviewed": true,
+    "current_environment_rechecked": true,
+    "source_review_only_for_backend_security": true,
+    "postgresql_16_integration_reexecuted": false
+  },
+  "checks": {
+    "frontend_api_build": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "command": "VITE_APP_MODE=api VITE_API_URL=https://api.ci.example.test npm.cmd run build",
+      "typescript": true,
+      "vite_version": "8.3.4",
+      "modules_transformed": 2511
+    },
+    "javascript_syntax": {
+      "status": "PASS",
+      "commands": [
+        "node --check tests/e2e/release-acceptance.spec.cjs",
+        "node --check scripts/verify-restored-database.mjs"
+      ],
+      "browser_or_restore_acceptance": false
+    },
+    "backend_default_suite": {
+      "status": "BLOCKED",
+      "command": "From backend: RUN_POSTGRES_INTEGRATION=false; mvnd -B -ntp test",
+      "tests_counted_this_run": false,
+      "reason": "Maven could not resolve Spring Boot parent POM 3.5.6 because Maven Central access was denied by the network sandbox (Permission denied: getsockopt). Existing Surefire reports were not counted."
+    },
+    "backend_test_source_compilation": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "command": "From backend: mvnd -B -ntp -DskipTests test-compile",
+      "java_version": 21,
+      "main_sources_compiled": 42,
+      "test_sources_compiled": 17,
+      "tests_executed": false,
+      "database_contacted": false
+    },
+    "postgres_18_supplemental_integration": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "postgres_version": "18.6",
+      "database_disposable": true,
+      "bind_address": "127.0.0.1",
+      "port": 55439,
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "includes_fresh_v1_to_v7_migrations": true,
+      "includes_populated_v6_to_v7_regression": true,
+      "satisfies_postgresql_16_gate": false
+    },
+    "two_profile_browser_acceptance": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "browser_profiles": 2,
+      "bidirectional_live_messages": true,
+      "read_receipts": true,
+      "idempotency": true,
+      "history_after_reload": true,
+      "logout_and_revoked_token_rejection": true,
+      "backend_restart_and_reconnect": false,
+      "database_version": "PostgreSQL 18.6 (supplemental)",
+      "reason_restart_skipped": "Docker unavailable; CC_RESTART_BACKEND=false"
+    },
+    "application_backup_restore": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "backup_restored_to_different_empty_database": true,
+      "restored_app_started": true,
+      "readiness_verified": true,
+      "both_synthetic_users_logged_in": true,
+      "history_retrieved": true,
+      "new_message_persisted_and_retrieved": true,
+      "database_version": "PostgreSQL 18.6",
+      "compose_and_postgresql_16_verified": false
+    },
+    "focused_websocket_regression": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "includes_legacy_unavailable_serialization_regression": true,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "api_url_guards": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "missing_api_url_rejected": true,
+      "invalid_placeholder_rejected": true
+    },
+    "bundle_secret_marker_scan": {
+      "status": "PASS_PREVIOUS_VERIFICATION",
+      "secret_markers_found": false
+    }
+  },
+  "release_gates": {
+    "frontend_production_build": {
+      "status": "PASS",
+      "evidence": "Current npm.cmd run build passed TypeScript and Vite production build."
+    },
+    "responsive_frontend_browser_acceptance": {
+      "status": "BLOCKED",
+      "evidence": "Responsive scenarios added to the existing Playwright flow; not executed because local Playwright is absent, Chrome headless failed before rendering, and hosted CI is unavailable."
+    },
+    "backend_unit_and_web_tests": {
+      "status": "BLOCKED",
+      "evidence": "Maven dependency resolution was denied before a current suite could run. Previous 76-pass/3-skip result is preserved as prior evidence."
+    },
+    "postgres_16_fresh_migrations_populated_v6_to_v7_and_integration": {
+      "status": "BLOCKED",
+      "evidence": "No verified disposable PostgreSQL 16 runner is available. Earlier PostgreSQL 18.6 results are supplemental and were not rerun."
+    },
+    "two_profile_acceptance": {
+      "status": "BLOCKED",
+      "evidence": "Earlier synthetic PostgreSQL 18.6 E2E result is preserved, but current E2E and responsive acceptance were not run."
+    },
+    "compose_startup_health_restart_reconnect": {
+      "status": "BLOCKED",
+      "evidence": "Docker/Compose unavailable; no runtime restart/reconnect was executed."
+    },
+    "application_backup_restore": {
+      "status": "BLOCKED",
+      "evidence": "Earlier PostgreSQL 18.6 restore is supplemental prior evidence; required PostgreSQL 16/Compose restore was not run."
+    },
+    "https_wss_proxy_and_encryption_at_rest": {
+      "status": "BLOCKED",
+      "evidence": "No staging endpoint, TLS configuration/certificate, or operator storage-encryption evidence was available."
+    },
+    "hosted_ci": {
+      "status": "NOT RUN",
+      "evidence": "No Git repository metadata, GitHub CLI, or authorized runner."
+    }
+  },
+  "safety": {
+    "env_file_read": false,
+    "development_database_port_5432_contacted": false,
+    "development_database_modified": false,
+    "public_deployment_performed": false,
+    "task_scoped_postgres_temp_removed": true,
+    "temporary_playwright_runtime_removed": true,
+    "synthetic_browser_state_and_backup_removed": true,
+    "historical_release_reports_modified": false,
+    "final_reaudit_environment_files_read": false,
+    "final_reaudit_development_database_port_5432_contacted": false,
+    "final_reaudit_temporary_browser_profiles_removed": true,
+    "final_reaudit_temporary_harness_removed": true,
+    "final_reaudit_local_dev_server_stopped": true,
+    "final_reaudit_public_deployment_performed": false
+  },
+  "previous_reported_evidence": {
+    "note": "The following results were recorded earlier on 2026-10-19 and were not re-executed in the final staging re-audit.",
+    "frontend_api_build": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "command": "VITE_APP_MODE=api VITE_API_URL=https://api.ci.example.test npm.cmd run build",
+      "typescript": true,
+      "vite_version": "8.3.4",
+      "modules_transformed": 2511
+    },
+    "backend_default_suite": {
+      "status": "PASS_WITH_POSTGRES_SKIPPED",
+      "command": "From backend: RUN_POSTGRES_INTEGRATION=false mvnd -B -ntp test",
+      "tests": 79,
+      "passed": 76,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 3,
+      "postgres_integration_enabled": false
+    },
+    "postgres_18_supplemental_integration": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "postgres_version": "18.6",
+      "database_disposable": true,
+      "bind_address": "127.0.0.1",
+      "port": 55439,
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "includes_fresh_v1_to_v7_migrations": true,
+      "includes_populated_v6_to_v7_regression": true,
+      "satisfies_postgresql_16_gate": false
+    },
+    "two_profile_browser_acceptance": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "browser_profiles": 2,
+      "bidirectional_live_messages": true,
+      "read_receipts": true,
+      "idempotency": true,
+      "history_after_reload": true,
+      "logout_and_revoked_token_rejection": true,
+      "backend_restart_and_reconnect": false,
+      "database_version": "PostgreSQL 18.6 (supplemental)",
+      "reason_restart_skipped": "Docker unavailable; CC_RESTART_BACKEND=false"
+    },
+    "application_backup_restore": {
+      "status": "PREVIOUS_REPORTED_PASS_NOT_RERUN",
+      "backup_restored_to_different_empty_database": true,
+      "restored_app_started": true,
+      "readiness_verified": true,
+      "both_synthetic_users_logged_in": true,
+      "history_retrieved": true,
+      "new_message_persisted_and_retrieved": true,
+      "database_version": "PostgreSQL 18.6",
+      "compose_and_postgresql_16_verified": false
+    },
+    "previous_release_gates": {
+      "postgres_fresh_migration_v1_to_v7": {
+        "status": "BLOCKED",
+        "reason": "Fresh V1-V7 migrations passed on a disposable PostgreSQL 18.6 instance. The required PostgreSQL 16 verification remains outstanding; no PostgreSQL 16 runner is available locally."
+      },
+      "populated_v6_to_v7_upgrade": {
+        "status": "BLOCKED",
+        "reason": "The permanent regression case passed on disposable PostgreSQL 18.6. PostgreSQL 16 execution remains required and is unavailable locally."
+      },
+      "postgres_integration_and_roles": {
+        "status": "BLOCKED",
+        "reason": "All three integration tests passed on disposable PostgreSQL 18.6, including role and token revocation checks. The PostgreSQL 16 gate remains outstanding."
+      },
+      "bidirectional_messaging_acceptance": {
+        "status": "PASS_WITH_BACKEND_RESTART_SKIPPED",
+        "reason": "Two-profile Playwright acceptance passed against disposable PostgreSQL 18.6 for live messaging, receipts, idempotency, reload/history, logout, and token revocation. Docker-backed restart/reconnect was skipped."
+      },
+      "compose_runtime": {
+        "status": "BLOCKED",
+        "reason": "Docker and Compose executables unavailable; Compose definition inspected only."
+      },
+      "application_backup_restore": {
+        "status": "PASS_POSTGRES_18_SUPPLEMENTAL",
+        "reason": "Backup restored into a different empty database; a second app instance verified readiness, both logins, saved history, and a new message. PostgreSQL 16 and Compose recovery remain outstanding."
+      },
+      "browser_acceptance": {
+        "status": "PASS_WITH_BACKEND_RESTART_SKIPPED",
+        "reason": "The existing two-profile Playwright flow passed against the local disposable app and PostgreSQL 18.6 database with CC_RESTART_BACKEND=false. Restart/reconnect and PostgreSQL 16 remain outstanding."
+      },
+      "https_wss_and_storage_at_rest": {
+        "status": "BLOCKED",
+        "reason": "No staging endpoint, TLS proxy, or verifiable encrypted storage. CI loopback HTTP does not prove HTTPS/WSS."
+      },
+      "hosted_ci": {
+        "status": "NOT RUN",
+        "reason": "No Git metadata, configured remote, gh CLI, or authorized hosted runner. Workflow source was inspected only."
+      }
+    }
+  },
+  "current_reaudit": {
+    "date": "2026-10-19",
+    "verdict": "NOT READY FOR STAGING",
+    "tools": {
+      "node": "22.13.1",
+      "npm": "10.9.2",
+      "java": "21.0.12.1",
+      "maven_daemon": "1.0.6",
+      "postgresql_client_and_server_commands": "unavailable",
+      "docker_and_compose": "unavailable",
+      "local_playwright": "not installed",
+      "chrome": "installed; headless execution failed before rendering because the GPU process was unusable",
+      "git": "installed; workspace has no .git metadata",
+      "github_cli": "unavailable",
+      "authorized_hosted_runner": "unavailable"
+    },
+    "checks": {
+      "frontend_production_build": {
+        "status": "PASS",
+        "command": "npm.cmd run build",
+        "typescript": true,
+        "vite_version": "8.3.4",
+        "modules_transformed": 2511
+      },
+      "frontend_api_mode_build": {
+        "status": "PASS",
+        "command": "$env:VITE_APP_MODE='api'; $env:VITE_API_URL='https://api.ci.example.test'; npm.cmd run build",
+        "typescript": true,
+        "vite_version": "8.3.4",
+        "modules_transformed": 2511,
+        "endpoint_contacted": false,
+        "staging_endpoint_verified": false
+      },
+      "javascript_syntax": {
+        "status": "PASS",
+        "commands": [
+          "node --check tests/e2e/release-acceptance.spec.cjs",
+          "node --check scripts/verify-restored-database.mjs"
+        ]
+      },
+      "responsive_browser_acceptance": {
+        "status": "BLOCKED",
+        "viewport_results": "none",
+        "viewports_added_to_ci_test": [
+          "320x568",
+          "360x800",
+          "390x844",
+          "430x932",
+          "768x1024",
+          "1024x768",
+          "1280x800",
+          "1440x900",
+          "1920x1080"
+        ],
+        "scenarios_added_but_not_executed": [
+          "protected-route horizontal overflow",
+          "phone chat list/detail/back navigation",
+          "mobile navigation keyboard focus and Escape behavior",
+          "short keyboard-height composer visibility",
+          "long URL wrapping",
+          "WebSocket connection count stable during chat view changes"
+        ],
+        "reason": "Playwright is not installed locally; Chrome headless exited before rendering with GPU process unusable; no authorized hosted runner is available."
+      },
+      "backend_default_suite": {
+        "status": "BLOCKED",
+        "command": "From backend: RUN_POSTGRES_INTEGRATION=false; mvnd -B -ntp test",
+        "tests_counted_this_run": false,
+        "reason": "Maven could not resolve Spring Boot parent POM 3.5.6 because Maven Central access was denied by the network sandbox (Permission denied: getsockopt). Existing Surefire reports were not counted."
+      },
+      "postgresql_16_integration_and_migrations": {
+        "status": "BLOCKED",
+        "postgresql_16_execution": false,
+        "reason": "No local PostgreSQL client/server tools, Docker/Compose, or authorized PostgreSQL 16 runner; no database was contacted."
+      },
+      "two_profile_api_acceptance_and_restart_reconnect": {
+        "status": "BLOCKED",
+        "executed_this_reaudit": false,
+        "previous_synthetic_postgresql_18_acceptance": "reported in prior evidence; not rerun",
+        "reason": "Local Playwright, isolated backend/database, Compose, and hosted runner are unavailable; backend restart/reconnect was not run."
+      },
+      "compose_runtime_and_restore": {
+        "status": "BLOCKED",
+        "compose_executed": false,
+        "reason": "Docker and Compose are unavailable. Prior PostgreSQL 18 restore evidence was not rerun and does not satisfy the PostgreSQL 16/Compose gate."
+      },
+      "https_wss_proxy_and_storage_encryption": {
+        "status": "BLOCKED",
+        "reason": "No real staging endpoint, TLS proxy/certificate, or verifiable database and backup storage encryption evidence is available."
+      },
+      "hosted_ci": {
+        "status": "NOT RUN",
+        "workflow_review": "source inspected only; no YAML validator was available",
+        "reason": "The workspace has no Git metadata, no GitHub CLI, and no authorized hosted runner."
+      },
+      "backend_security_source_review": {
+        "status": "SOURCE REVIEW ONLY",
+        "findings": [
+          "Stateless protected REST authorization and explicit login/register exceptions.",
+          "BCrypt password hashing and JWT expiration/revocation checks.",
+          "Exact configured CORS and WebSocket origin allowlists; WebSocket JWT expiry/revocation validation.",
+          "Conversation membership checks on message send, delivery acknowledgement, and read paths.",
+          "Idempotent send lookup and server-side nonblank/4,000-character message validation."
+        ],
+        "runtime_tests_executed": false,
+        "independent_security_audit": false
+      }
+    },
+    "cleanup": {
+      "temporary_responsive_harness_removed": true,
+      "temporary_browser_profiles_removed": true,
+      "local_vite_server_stopped": true,
+      "temporary_maven_logs_removed": true,
+      "development_database_port_5432_contacted": false,
+      "environment_files_read": false,
+      "public_deployment_performed": false
+    }
+  }
+}

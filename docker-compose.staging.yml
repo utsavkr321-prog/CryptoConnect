@@ -1,0 +1,42 @@
+services:
+  backend:
+    image: ${STAGING_BACKEND_IMAGE:?Set a unique staging backend image reference}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      MONGODB_URI: ${STAGING_MONGODB_URI:?Set the protected staging MongoDB Atlas URI}
+      MONGODB_DATABASE: ${STAGING_MONGODB_DATABASE:-cryptoconnect_staging}
+      CORS_ORIGIN: ${STAGING_CORS_ORIGIN:?Set STAGING_CORS_ORIGIN to the exact HTTPS frontend origin}
+      PORT: "8080"
+      SERVER_SHUTDOWN: graceful
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: 30s
+    secrets:
+      - staging_jwt_secret
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        export JWT_SECRET="$$(cat /run/secrets/staging_jwt_secret)"
+        exec java -XX:MaxRAMPercentage=75.0 -jar /app/app.jar
+    expose:
+      - "8080"
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 25s
+    restart: unless-stopped
+    stop_grace_period: 40s
+
+networks:
+  edge:
+    external: true
+    name: ${STAGING_PROXY_NETWORK:?Set STAGING_PROXY_NETWORK to a private network shared with the TLS reverse proxy}
+
+secrets:
+  staging_jwt_secret:
+    file: ${STAGING_JWT_SECRET_FILE:?Set path to the staging JWT secret file}

@@ -1,0 +1,11 @@
+target
+*.log
+hs_err_pid*.log
+replay_pid*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key

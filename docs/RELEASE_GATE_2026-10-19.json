@@ -1,0 +1,185 @@
+{
+    "project":  "CryptoConnect",
+    "verification_date":  "2026-10-19",
+    "verdict":  "NOT READY FOR STAGING",
+    "production_readiness":  "NOT VERIFIED",
+    "development_database_touched":  false,
+    "env_file_read":  false,
+    "public_deployment_performed":  false,
+    "runtime":  {
+                    "java":  "Temurin 21.0.12.1",
+                    "maven_daemon":  "1.0.6",
+                    "maven":  "3.9.16",
+                    "node":  "22.13.1",
+                    "npm":  "10.9.2",
+                    "vite":  "8.3.4",
+                    "os":  "Windows 11 amd64"
+                },
+    "gates":  {
+                  "backend_default_suite":  {
+                                                "status":  "PASS",
+                                                "command":  "Remove-Item Env:RUN_POSTGRES_INTEGRATION -ErrorAction SilentlyContinue; mvnd.cmd -q test (cwd backend)",
+                                                "tests":  75,
+                                                "passed":  73,
+                                                "failed":  0,
+                                                "errors":  0,
+                                                "skipped":  2,
+                                                "skip_reason":  "Both PostgresMessagingIntegrationTest methods require RUN_POSTGRES_INTEGRATION=true and a disposable database"
+                                            },
+                  "postgresql_18_full_suite_previous_day":  {
+                                                                "status":  "PASS",
+                                                                "evidence":  "Preserved 2026-10-18 Surefire reports; not rerun today",
+                                                                "postgresql":  "18.6",
+                                                                "tests":  75,
+                                                                "passed":  75,
+                                                                "failed":  0,
+                                                                "errors":  0,
+                                                                "skipped":  0
+                                                            },
+                  "postgresql_integration_current_run":  {
+                                                             "status":  "BLOCKED",
+                                                             "tests_skipped":  2,
+                                                             "reason":  "No disposable database was available; RUN_POSTGRES_INTEGRATION was unset"
+                                                         },
+                  "postgresql_16_integration":  {
+                                                    "status":  "BLOCKED",
+                                                    "reason":  "No PostgreSQL 16 server or compatible container runtime available"
+                                                },
+                  "role_separation_current_run":  {
+                                                      "status":  "NOT_RUN",
+                                                      "reason":  "No disposable database available for initializer execution or privilege checks"
+                                                  },
+                  "frontend_build":  {
+                                         "status":  "PASS",
+                                         "command":  "VITE_APP_MODE=api VITE_API_URL=https://chat.staging.example.net npm.cmd run build",
+                                         "modules_transformed":  2511,
+                                         "exit_code":  0
+                                     },
+                  "api_origin_build_guards":  {
+                                                  "status":  "PASS",
+                                                  "checks":  [
+                                                                 "https://chat.example.invalid rejected with expected guard message",
+                                                                 "missing VITE_API_URL rejected with expected guard message"
+                                                             ]
+                                              },
+                  "frontend_lint_or_unit_scripts":  {
+                                                        "status":  "NOT_RUN",
+                                                        "reason":  "No lint or frontend test script is configured in package.json"
+                                                    },
+                  "secret_pattern_scan":  {
+                                              "status":  "PASS",
+                                              "scanned_files":  48,
+                                              "potential_hits":  0,
+                                              "scopes":  [
+                                                             "log files",
+                                                             "Surefire XML reports",
+                                                             "dist/assets"
+                                                         ],
+                                              "env_file_read":  false
+                                          },
+                  "compose_runtime":  {
+                                          "status":  "BLOCKED",
+                                          "reason":  "Docker/Compose, Podman, and nerdctl unavailable"
+                                      },
+                  "postgres_initializer":  {
+                                               "status":  "BLOCKED",
+                                               "reason":  "No safe disposable PostgreSQL cluster available; prior Windows initdb restricted-token failure remains"
+                                           },
+                  "browser_acceptance":  {
+                                             "status":  "BLOCKED",
+                                             "reason":  "Prior isolated Chrome CDP launch crashed in GPU process; automation framework absent"
+                                         },
+                  "bidirectional_websocket_acceptance":  {
+                                                             "status":  "NOT_RUN",
+                                                             "reason":  "Latest recorded protocol smoke tested A-to-B only; no live service today"
+                                                         },
+                  "backup_restore_application_verification":  {
+                                                                  "status":  "NOT_RUN",
+                                                                  "reason":  "Prior SQL restore was not followed by app startup and API verification against restored DB"
+                                                              },
+                  "real_proxy_tls_wss":  {
+                                             "status":  "NOT_RUN",
+                                             "reason":  "No real staging endpoint or proxy configuration"
+                                         },
+                  "e2ee":  {
+                               "status":  "NOT_RUN",
+                               "implemented":  false
+                           }
+              },
+    "notes":  [
+                  "The Maven Central dependency resolution sandbox failure was overcome with approved network access; no dependency versions changed.",
+                  "The development PostgreSQL service/database on port 5432 was not contacted.",
+                  "No source changes were made; npm build regenerated dist/.",
+                  "No Git metadata exists, so no Git diff is claimed."
+              ],
+    "final_blocker_resolution_run":  {
+                                         "local_date":  "2026-10-19",
+                                         "utc_date":  "2026-10-18",
+                                         "backend_clean_test":  {
+                                                                    "status":  "PASS",
+                                                                    "command":  "mvnd.cmd -q clean test (cwd backend)",
+                                                                    "database":  "No database configured; PostgreSQL integration remained disabled",
+                                                                    "tests":  75,
+                                                                    "passed":  73,
+                                                                    "failed":  0,
+                                                                    "errors":  0,
+                                                                    "skipped":  2,
+                                                                    "report_files":  17,
+                                                                    "surefire_timestamp_local":  "2026-10-19 01:00",
+                                                                    "network_note":  "Initial sandboxed Maven Central access failed; rerun with approved network access succeeded."
+                                                                },
+                                         "ci_access":  {
+                                                           "status":  "BLOCKED",
+                                                           "git_metadata_present":  false,
+                                                           "git_remote_available":  false,
+                                                           "hosting_cli_available":  false,
+                                                           "connected_ci_provider_tool_available":  false
+                                                       },
+                                         "postgres16":  {
+                                                            "status":  "BLOCKED",
+                                                            "reason":  "No PostgreSQL 16 server/client or compatible container runtime available; the running PostgreSQL 18 service was not contacted."
+                                                        },
+                                         "compose":  {
+                                                         "status":  "BLOCKED",
+                                                         "reason":  "Docker, Compose, Podman, and nerdctl unavailable."
+                                                     },
+                                         "browser":  {
+                                                         "status":  "BLOCKED",
+                                                         "reason":  "Chrome and Edge binaries exist, but no browser automation framework or connected browser tool is available, and no isolated backend/database is running."
+                                                     },
+                                         "backup_restore":  {
+                                                                "status":  "BLOCKED",
+                                                                "reason":  "No disposable PostgreSQL 16 database available for application-level restoration verification."
+                                                            },
+                                         "transport":  {
+                                                           "status":  "BLOCKED",
+                                                           "reason":  "No real staging endpoint or proxy configuration available."
+                                                       },
+                                         "development_database_touched":  false,
+                                         "secrets_read_or_printed":  false,
+                                         "public_deployment_performed":  false
+                                     },
+    "prepared_github_actions_workflow":  {
+                                             "status":  "NOT_RUN",
+                                             "workflow":  ".github/workflows/release-verification.yml",
+                                             "runner":  "ubuntu-24.04",
+                                             "java":  "21",
+                                             "node":  "22",
+                                             "postgres":  "16",
+                                             "checks":  [
+                                                            "PostgreSQL-enabled backend package suite",
+                                                            "API-mode frontend build and origin guards",
+                                                            "staging Compose config/build/runtime checks",
+                                                            "two-context Playwright API/WebSocket acceptance",
+                                                            "backend restart and reconnection",
+                                                            "disposable backup restore followed by application checks"
+                                                        ],
+                                             "integration_tests":  [
+                                                                       "tests/e2e/release-acceptance.spec.cjs",
+                                                                       "scripts/verify-restored-database.mjs"
+                                                                   ],
+                                             "hosted_run":  "Not run; Git metadata and remote unavailable in this workspace",
+                                             "https_wss":  "Blocked pending a genuine staging endpoint and operator proxy",
+                                             "e2ee_implemented":  false
+                                         }
+}

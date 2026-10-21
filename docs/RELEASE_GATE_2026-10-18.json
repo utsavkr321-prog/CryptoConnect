@@ -1,0 +1,74 @@
+{
+  "project": "CryptoConnect",
+  "verification_date": "2026-10-18",
+  "verdict": "NOT READY FOR STAGING",
+  "production_readiness": "NOT VERIFIED",
+  "development_database_touched": false,
+  "secret_files_read_or_printed": false,
+  "public_deployment_performed": false,
+  "gates": {
+    "backend_full_suite_postgresql_18": {
+      "status": "PASS",
+      "evidence": "Same-day workspace Surefire reports from preceding audit; reused, not rerun during closure",
+      "command": "RUN_POSTGRES_INTEGRATION=true mvnd.cmd -q test (cwd backend)",
+      "runtime": "Temurin Java 21.0.12.1; Maven Daemon 1.0.6 Windows amd64",
+      "postgresql_version": "18.6",
+      "tests": 75,
+      "passed": 75,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "postgres_integration_tests": 2
+    },
+    "postgresql_16_compatibility": {
+      "status": "BLOCKED",
+      "reason": "No PostgreSQL 16 server or compatible container runtime available"
+    },
+    "frontend_production_build": {
+      "status": "PASS",
+      "command": "VITE_APP_MODE=api VITE_API_URL=https://chat.staging.example.net npm.cmd run build",
+      "runtime": "Node.js 22.13.1; npm 10.9.2; Vite 8.3.4",
+      "modules_transformed": 2511,
+      "exit_code": 0
+    },
+    "postgres_initializer_current_closure": {
+      "status": "BLOCKED",
+      "shell_syntax": "PASS with Git Bash 5.2.37",
+      "reason": "Fresh local PostgreSQL cluster failed before initializer execution: restricted-token creation error 87 and re-execution error 3"
+    },
+    "compose_model_build_runtime": {
+      "status": "BLOCKED",
+      "reason": "Docker Engine/Compose, Podman, and nerdctl unavailable"
+    },
+    "initializer_roles_prior_same_day": {
+      "status": "PASS",
+      "evidence": "Prior same-day disposable PostgreSQL 18.6 audit; not newly repeated in closure",
+      "notes": "Role split/restrictions were covered by integration tests using equivalent grants; earlier actual initializer evidence is historical"
+    },
+    "backup_restore_sql_postgresql_18": {
+      "status": "PASS",
+      "evidence": "Prior same-day disposable PostgreSQL 18.6 restore exercise",
+      "notes": "Custom-format restore to separate empty DB; migrations, synthetic rows, ownership, and role restrictions inspected"
+    },
+    "backup_restore_application_smoke": {
+      "status": "NOT_RUN",
+      "reason": "Backend was not started against the restored database"
+    },
+    "browser_two_profile_acceptance": {
+      "status": "BLOCKED",
+      "reason": "No automation framework; isolated Chrome CDP process exited after GPU process fatal in restricted environment"
+    },
+    "live_api_websocket_protocol_smoke": {
+      "status": "PASS",
+      "evidence": "Prior same-day loopback protocol smoke; not browser UI",
+      "notes": "A-to-B delivery, idempotency, receipts, reconnect/history reconciliation, revocation, and restart persistence; B-to-A not exercised"
+    },
+    "real_proxy_tls_wss": {
+      "status": "NOT_RUN",
+      "reason": "No proxy config, staging hostname, certificate, or deployment"
+    },
+    "independent_security_review_and_load_test": {
+      "status": "NOT_RUN"
+    }
+  }
+}

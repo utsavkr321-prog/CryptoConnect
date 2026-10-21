@@ -1,0 +1,19 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:}
+      database: ${MONGODB_DATABASE:cryptoconnect}
+      uuid-representation: standard
+server:
+  port: ${PORT:8080}
+app:
+  jwt-secret: ${JWT_SECRET}
+  jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  cors-origin: ${CORS_ORIGIN:http://localhost:5173}
+  presence:
+    stale-seconds: ${PRESENCE_STALE_SECONDS:90}
+  rate-limit:
+    authentication-per-minute: ${RATE_LIMIT_AUTHENTICATION_PER_MINUTE:20}
+    registration-per-hour: ${RATE_LIMIT_REGISTRATION_PER_HOUR:10}
+    search-per-minute: ${RATE_LIMIT_SEARCH_PER_MINUTE:60}
+    writes-per-minute: ${RATE_LIMIT_WRITES_PER_MINUTE:30}
