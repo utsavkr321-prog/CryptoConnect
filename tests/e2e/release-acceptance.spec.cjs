@@ -91,24 +91,24 @@ test('two isolated profiles register, exchange live messages, recover, and revok
     await register(pages[0], accounts[0]);
     await register(pages[1], accounts[1]);
 
-    const contactResults = await pages[0].evaluate(async ({ email, api }) => {
+    const contactResults = await pages[0].evaluate(async ({ name, api }) => {
       const token = sessionStorage.getItem('cc_access_token');
-      const search = await fetch(`${api}/api/users?query=${encodeURIComponent(email)}`, {
+      const search = await fetch(`${api}/api/users?query=${encodeURIComponent(name)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const [user] = await search.json();
+      const { users: [user] } = await search.json();
       const body = JSON.stringify({ userId: user.id });
       const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       const add = await fetch(`${api}/api/contacts`, { method: 'POST', headers, body });
       const duplicate = await fetch(`${api}/api/contacts`, { method: 'POST', headers, body });
       return { search: search.status, add: add.status, duplicate: duplicate.status };
-    }, { email: accounts[1].email, api: apiUrl });
+    }, { name: accounts[1].name, api: apiUrl });
     expect(contactResults).toEqual({ search: 200, add: 201, duplicate: 409 });
 
     await pages[0].goto(`${appUrl}/chat`);
     await pages[0].getByRole('button', { name: 'Start a conversation' }).click();
-    await pages[0].locator('#registered-user-search').fill(accounts[1].email);
-    const userResult = pages[0].getByRole('button').filter({ hasText: accounts[1].email });
+    await pages[0].locator('#registered-user-search').fill(accounts[1].name);
+    const userResult = pages[0].getByRole('button').filter({ hasText: accounts[1].name });
     await expect(userResult).toBeVisible();
     await userResult.click();
     await expect(pages[0].getByRole('textbox', { name: 'Message' })).toBeVisible();
