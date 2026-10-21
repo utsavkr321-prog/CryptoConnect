@@ -152,7 +152,7 @@ jobs:
           chmod 0600 "$CC_RUN_DIR/compose.env"
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" config --quiet
           test "$(docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" config --services)" = backend
-          docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" build backend
+          docker compose --progress plain --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" build backend
           docker compose --env-file "$CC_RUN_DIR/compose.env" -f docker-compose.staging.yml -p "$CC_PROJECT" up -d
           startup_started=$SECONDS
           for attempt in $(seq 1 90); do
