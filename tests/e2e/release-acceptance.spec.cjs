@@ -101,14 +101,43 @@ test('two isolated profiles register, exchange live messages, recover, and revok
       const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       const add = await fetch(`${api}/api/contacts`, { method: 'POST', headers, body });
       const duplicate = await fetch(`${api}/api/contacts`, { method: 'POST', headers, body });
-      return { search: search.status, add: add.status, duplicate: duplicate.status };
+      const friendRequest = await fetch(`${api}/api/friend-requests`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ recipientId: user.id }),
+      });
+      const { id: friendRequestId } = await friendRequest.json();
+      return {
+        search: search.status,
+        add: add.status,
+        duplicate: duplicate.status,
+        friendRequest: friendRequest.status,
+        friendRequestId,
+      };
     }, { name: accounts[1].name, api: apiUrl });
-    expect(contactResults).toEqual({ search: 200, add: 201, duplicate: 409 });
+    expect(contactResults).toEqual({
+      search: 200,
+      add: 201,
+      duplicate: 409,
+      friendRequest: 201,
+      friendRequestId: expect.any(String),
+    });
+    const acceptedRequest = await pages[1].evaluate(async ({ api, requestId }) => {
+      const token = sessionStorage.getItem('cc_access_token');
+      const response = await fetch(`${api}/api/friend-requests/${requestId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json();
+      return { status: response.status, friendStatus: result.status };
+    }, { api: apiUrl, requestId: contactResults.friendRequestId });
+    expect(acceptedRequest).toEqual({ status: 200, friendStatus: 'ACCEPTED' });
 
     await pages[0].goto(`${appUrl}/chat`);
     await pages[0].getByRole('button', { name: 'Start a conversation' }).click();
     await pages[0].locator('#registered-user-search').fill(accounts[1].name);
-    const userResult = pages[0].getByRole('button').filter({ hasText: accounts[1].name });
+    await expect(pages[0].getByText(accounts[1].name, { exact: true })).toBeVisible();
+    const userResult = pages[0].getByRole('button', { name: 'Message', exact: true });
     await expect(userResult).toBeVisible();
     await userResult.click();
     await expect(pages[0].getByRole('textbox', { name: 'Message' })).toBeVisible();

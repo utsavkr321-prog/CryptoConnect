@@ -538,7 +538,7 @@ export function ChatPage() {
                     <span className="block text-xs text-slate-200 truncate">{user.name}</span>
                     <span className={`block text-[11px] ${isAcceptedFriend && directoryPresence[user.id] ? 'text-emerald-400' : 'text-slate-500'}`}>{isAcceptedFriend ? directoryPresence[user.id] ? 'Online' : 'Offline' : 'Presence private until friendship is accepted'}</span>
                   </span>
-                  {isExistingConv ? (
+                  {isExistingConv || isAcceptedFriend ? (
                     <button disabled={openingContactId !== null} onClick={() => void startConversation(user.id)} className="text-xs text-emerald-300 hover:text-emerald-200 disabled:opacity-50 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded">
                       {isBusy ? 'Opening…' : 'Message'}
                     </button>
