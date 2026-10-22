@@ -142,6 +142,20 @@ test('two isolated profiles register, exchange live messages, recover, and revok
     await userResult.click();
     await expect(pages[0].getByRole('textbox', { name: 'Message' })).toBeVisible();
 
+    const listedConversations = await pages[0].evaluate(async (api) => {
+      const token = sessionStorage.getItem('cc_access_token');
+      const response = await fetch(`${api}/api/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const conversations = response.ok ? await response.json() : [];
+      return {
+        status: response.status,
+        participantNames: conversations.flatMap((conversation) => conversation.participants.map((participant) => participant.name)),
+      };
+    }, apiUrl);
+    expect(listedConversations.status).toBe(200);
+    expect(listedConversations.participantNames).toContain(accounts[1].name);
+
     // Exercise every protected route at the supported device classes using the authenticated test profile.
     for (const size of responsiveViewports) {
       await pages[0].setViewportSize(size);

@@ -454,7 +454,7 @@ export function ChatPage() {
         const opened = await conversationService.openConversation(requestedContactId, items);
         if (!items.some((item) => item.id === opened.id)) items = [...items, opened];
         setActiveId(opened.id);
-      } else setActiveId(items[0]?.id ?? null);
+      } else setActiveId(phoneLayoutRef.current ? null : items[0]?.id ?? null);
       setConversations(items);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Failed to load conversations and recent messages.');
