@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -26,6 +27,19 @@ public class UserRepository {
     return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("email").regex(exactIgnoreCase(email))), User.class));
   }
   public boolean existsByEmailIgnoreCase(String email) { return findByEmailIgnoreCase(email).isPresent(); }
+  public boolean enrollIdentityKeyIfAbsent(UUID userId, String publicKey, String fingerprint) {
+    Criteria noPublicKey = new Criteria().orOperator(
+        Criteria.where("publicKey").exists(false), Criteria.where("publicKey").is(null));
+    Criteria noFingerprint = new Criteria().orOperator(
+        Criteria.where("keyFingerprint").exists(false), Criteria.where("keyFingerprint").is(null));
+    Query query = Query.query(Criteria.where("id").is(userId).andOperator(noPublicKey, noFingerprint));
+    Update update =
+        new Update()
+            .set("publicKey", publicKey)
+            .set("keyFingerprint", fingerprint)
+            .set("updatedAt", java.time.Instant.now());
+    return mongo.updateFirst(query, update, User.class).getModifiedCount() == 1;
+  }
   public List<User> findTop20ByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(String email, String name) {
     Pattern emailPattern = containsIgnoreCase(email);
     Pattern namePattern = containsIgnoreCase(name);
