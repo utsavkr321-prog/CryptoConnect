@@ -1,19 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy-950: #030712;
-  --color-navy-900: #0a0f1e;
-  --color-navy-850: #0d1424;
-  --color-navy-800: #111827;
-  --color-navy-700: #1a2540;
-  --color-navy-600: #243050;
+  --color-navy-950: #080b16;
+  --color-navy-900: #0b1020;
+  --color-navy-850: #11172a;
+  --color-navy-800: #151c31;
+  --color-navy-700: #232d49;
+  --color-navy-600: #34415f;
 
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
+  --color-emerald-400: #34d3c2;
+  --color-emerald-500: #14b8a6;
+  --color-emerald-600: #0f988a;
 
-  --color-blue-400: #60a5fa;
-  --color-blue-500: #3b82f6;
+  --color-blue-400: #67d8e8;
+  --color-blue-500: #22a6c4;
+
+  --color-indigo-300: #c4b5fd;
+  --color-indigo-400: #a78bfa;
+  --color-indigo-500: #8b5cf6;
+  --color-indigo-600: #7c3aed;
+  --color-violet-400: #a78bfa;
+  --color-violet-500: #8b5cf6;
 
   --color-slate-400: #94a3b8;
   --color-slate-500: #64748b;
@@ -45,7 +52,10 @@
   }
 
   body {
-    background-color: #0a0f1e;
+    background:
+      radial-gradient(ellipse at 18% -12%, rgba(99, 72, 190, 0.14), transparent 42%),
+      radial-gradient(ellipse at 100% 0%, rgba(20, 184, 166, 0.06), transparent 30%),
+      #0b1020;
     color: #e2e8f0;
     margin: 0;
     min-height: 100vh;
@@ -54,7 +64,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid #34d399;
+    outline: 2px solid #a78bfa;
     outline-offset: 2px;
   }
 
@@ -67,6 +77,10 @@
 
   button {
     touch-action: manipulation;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -118,57 +132,59 @@
   }
 
   .glass {
-    background: rgba(17, 24, 39, 0.7);
+    background: rgba(17, 23, 42, 0.82);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(167, 139, 250, 0.12);
   }
 
   .card {
-    background: #111827;
-    border: 1px solid #1e293b;
-    border-radius: 0.75rem;
+    background: linear-gradient(145deg, rgba(21, 28, 49, 0.97), rgba(15, 21, 38, 0.98));
+    border: 1px solid rgba(120, 138, 181, 0.16);
+    border-radius: 1rem;
+    box-shadow: 0 14px 36px rgba(2, 6, 23, 0.14);
   }
 
   .sidebar-item-active {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(59, 130, 246, 0.1));
-    border-left: 2px solid #10b981;
-    color: #34d399;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.19), rgba(20, 184, 166, 0.07));
+    border-left: 2px solid #a78bfa;
+    color: #c4b5fd;
   }
 
   .sidebar-item {
     border-left: 2px solid transparent;
     color: #94a3b8;
-    transition: all 0.15s ease;
+    border-radius: 0.65rem;
+    transition: all 0.18s ease;
   }
 
   .sidebar-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(148, 163, 184, 0.07);
     color: #e2e8f0;
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #8b5cf6, #6d4ad1);
     color: white;
     font-weight: 600;
-    transition: all 0.15s ease;
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    transition: all 0.18s ease;
+    box-shadow: 0 8px 22px rgba(109, 74, 209, 0.18);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+    box-shadow: 0 10px 26px rgba(139, 92, 246, 0.28);
     transform: translateY(-1px);
   }
 
   .btn-secondary {
-    background: rgba(59, 130, 246, 0.15);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: #60a5fa;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(129, 140, 248, 0.26);
+    color: #c4b5fd;
     font-weight: 500;
     transition: all 0.15s ease;
   }
 
   .btn-secondary:hover {
-    background: rgba(59, 130, 246, 0.25);
+    background: rgba(99, 102, 241, 0.19);
   }
 
   .badge-verified {
@@ -190,7 +206,7 @@
   }
 
   .message-sent {
-    background: linear-gradient(135deg, #059669, #0d9488);
+    background: linear-gradient(135deg, #6250c9, #4f46a5);
     border-radius: 1rem 1rem 0.25rem 1rem;
   }
 
@@ -208,12 +224,12 @@
   }
 
   .encrypt-step-active {
-    border-color: #10b981;
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
   }
 
   .encrypt-step-done {
-    border-color: rgba(16, 185, 129, 0.4);
+    border-color: rgba(20, 184, 166, 0.4);
   }
 
   .glow-emerald {
@@ -221,7 +237,7 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #34d399, #60a5fa);
+    background: linear-gradient(135deg, #c4b5fd, #67d8e8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -234,10 +250,10 @@
 
 @layer components {
   .input-field {
-    background: #0d1424;
-    border: 1px solid #1e293b;
+    background: rgba(9, 14, 28, 0.72);
+    border: 1px solid rgba(120, 138, 181, 0.2);
     color: #e2e8f0;
-    border-radius: 0.5rem;
+    border-radius: 0.65rem;
     padding: 0.625rem 0.875rem;
     min-height: 2.75rem;
     width: 100%;
@@ -246,8 +262,13 @@
   }
 
   .input-field:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+  }
+
+  .input-field:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
   }
 
   .input-field::placeholder {

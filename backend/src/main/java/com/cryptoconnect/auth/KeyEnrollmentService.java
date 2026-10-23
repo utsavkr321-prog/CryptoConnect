@@ -150,7 +150,7 @@ public class KeyEnrollmentService {
    * Compute a human-readable SHA-256 fingerprint of the SPKI bytes.
    * Format: uppercase hex bytes grouped in fours, colon-separated (e.g. "AABBCCDD:EEFF0011:...").
    */
-  static String computeFingerprint(byte[] spkiBytes) {
+  public static String computeFingerprint(byte[] spkiBytes) {
     try {
       byte[] hash = MessageDigest.getInstance("SHA-256").digest(spkiBytes);
       StringBuilder sb = new StringBuilder(hash.length * 2 + hash.length / 4);
@@ -161,6 +161,20 @@ public class KeyEnrollmentService {
       return sb.toString();
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException("SHA-256 unavailable", e);
+    }
+  }
+
+  public static String fingerprintForPublicKeyBytes(byte[] spkiBytes) {
+    try {
+      PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(spkiBytes));
+      if (!(key instanceof ECPublicKey ecPublicKey) || !isP256(ecPublicKey.getParams())) {
+        throw new IllegalArgumentException("Identity key must be a valid EC/P-256 SPKI public key");
+      }
+      return computeFingerprint(spkiBytes);
+    } catch (IllegalArgumentException invalidKey) {
+      throw invalidKey;
+    } catch (Exception invalidKey) {
+      throw new IllegalArgumentException("Identity key is not valid SPKI public-key data", invalidKey);
     }
   }
 

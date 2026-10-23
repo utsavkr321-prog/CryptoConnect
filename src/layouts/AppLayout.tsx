@@ -5,7 +5,8 @@ import { AppSidebar } from './AppSidebar';
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Overview & security status' },
-  '/chat': { title: 'Secure Chat', subtitle: 'Conversations and message history' },
+  '/chat': { title: 'Messaging', subtitle: 'Conversations and message history' },
+  '/cryptography-lab': { title: 'Cryptography Lab', subtitle: 'Local encryption, decryption, and key tools' },
   '/visualizer': { title: 'Encryption Visualizer', subtitle: 'Interactive AES-GCM demonstration' },
   '/security-lab': { title: 'Security Lab', subtitle: 'Run cryptographic tests locally' },
   '/contacts': { title: 'Contacts', subtitle: 'Manage contacts & key verification' },
@@ -51,7 +52,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   return (
-    <div className="app-shell flex overflow-hidden bg-[#0a0f1e]">
+    <div className="app-shell flex overflow-hidden bg-[#0b1020]">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
         <AppSidebar />

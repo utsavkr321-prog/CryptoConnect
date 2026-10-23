@@ -42,7 +42,7 @@ class UserControllerTest {
     User match = new User("match@example.test", "Matching User", "hash");
     match.setPublicKey("private-to-the-directory-response");
     match.setKeyFingerprint("fingerprint");
-    when(users.findDirectory("al", 0, 20)).thenReturn(List.of(match));
+    when(users.findDirectory("al", 0, 20, currentUser)).thenReturn(List.of(match));
 
     mvc.perform(get("/api/users").param("query", "al").with(auth()))
         .andExpect(status().isOk())
@@ -56,17 +56,32 @@ class UserControllerTest {
         .andExpect(jsonPath("$.users[0].keyFingerprint").doesNotExist())
         // safe public fields
         .andExpect(jsonPath("$.users[0].name").value("Matching User"));
-    verify(users).findDirectory("al", 0, 20);
+    verify(users).findDirectory("al", 0, 20, currentUser);
   }
 
   @Test void trimsQueryBeforeForwardingToRepository() throws Exception {
     User match = new User("match@example.test", "Matching User", "hash");
-    when(users.findDirectory("al", 0, 20)).thenReturn(List.of(match));
+    when(users.findDirectory("al", 0, 20, currentUser)).thenReturn(List.of(match));
 
     mvc.perform(get("/api/users").param("query", "  al  ").with(auth()))
         .andExpect(status().isOk());
     // query must be trimmed before reaching the repository
-    verify(users).findDirectory("al", 0, 20);
+    verify(users).findDirectory("al", 0, 20, currentUser);
+  }
+
+  @Test void normalizesEmailLookupQueryBeforeForwardingToRepository() throws Exception {
+    when(users.findDirectory("alice@example.test", 0, 20, currentUser)).thenReturn(List.of());
+    mvc.perform(get("/api/users").param("query", "  Alice@Example.Test  ").with(auth()))
+        .andExpect(status().isOk());
+    verify(users).findDirectory("alice@example.test", 0, 20, currentUser);
+  }
+
+  @Test void validatesTrimmedQueryLengthAndMaximum() throws Exception {
+    mvc.perform(get("/api/users").param("query", "   a  ").with(auth()))
+        .andExpect(status().isBadRequest());
+    mvc.perform(get("/api/users").param("query", "x".repeat(121)).with(auth()))
+        .andExpect(status().isBadRequest());
+    verifyNoInteractions(users);
   }
 
   @Test void excludesTheAuthenticatedUserFromDirectoryResults() throws Exception {
@@ -74,7 +89,7 @@ class UserControllerTest {
     org.springframework.test.util.ReflectionTestUtils.setField(self, "id", currentUser);
     User other = new User("other@example.test", "Other User", "hash");
     // repository returns size+1 to check hasMore; controller filters self, then limits to size
-    when(users.findDirectory("us", 0, 20)).thenReturn(List.of(self, other));
+    when(users.findDirectory("us", 0, 20, currentUser)).thenReturn(List.of(other));
 
     mvc.perform(get("/api/users").param("query", "us").with(auth()))
         .andExpect(status().isOk())
@@ -95,20 +110,20 @@ class UserControllerTest {
   }
 
   @Test void emptyQueryIsAllowedForBrowsing() throws Exception {
-    when(users.findDirectory("", 0, 20)).thenReturn(List.of());
+    when(users.findDirectory("", 0, 20, currentUser)).thenReturn(List.of());
 
     mvc.perform(get("/api/users").param("query", "").with(auth()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.users", hasSize(0)));
-    verify(users).findDirectory("", 0, 20);
+    verify(users).findDirectory("", 0, 20, currentUser);
   }
 
   @Test void paginationParametersAreForwardedToRepository() throws Exception {
-    when(users.findDirectory("bob", 2, 10)).thenReturn(List.of());
+    when(users.findDirectory("bob", 2, 10, currentUser)).thenReturn(List.of());
 
     mvc.perform(get("/api/users").param("query", "bob").param("page", "2").param("size", "10").with(auth()))
         .andExpect(status().isOk());
-    verify(users).findDirectory("bob", 2, 10);
+    verify(users).findDirectory("bob", 2, 10, currentUser);
   }
 
   @Test void invalidPaginationIsRejected() throws Exception {

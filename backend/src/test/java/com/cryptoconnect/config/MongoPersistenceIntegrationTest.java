@@ -9,8 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.cryptoconnect.auth.KeyChallenge;
 import com.cryptoconnect.auth.KeyChallengeRepository;
+import com.cryptoconnect.auth.KeyEnrollmentService;
 import com.cryptoconnect.user.User;
 import com.cryptoconnect.user.UserRepository;
+import com.cryptoconnect.user.ContactRepository;
+import com.cryptoconnect.user.ContactRelationship;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,7 @@ class MongoPersistenceIntegrationTest {
 
   @Autowired private MongoTemplate mongo;
   @Autowired private UserRepository users;
+  @Autowired private ContactRepository contacts;
   @Autowired private KeyChallengeRepository challenges;
   @Autowired private TestRestTemplate http;
 
@@ -82,8 +86,8 @@ class MongoPersistenceIntegrationTest {
     JsonNode alpha = registerAndLogin(alphaName, "alpha-" + suffix + "@example.test", password);
     JsonNode beta = registerAndLogin(betaName, "beta-" + suffix + "@example.test", password);
 
-    ResponseEntity<JsonNode> alphaFindsBeta = search(beta.path("token").asText(), betaName);
-    ResponseEntity<JsonNode> betaFindsAlpha = search(alpha.path("token").asText(), alphaName);
+    ResponseEntity<JsonNode> alphaFindsBeta = search(alpha.path("token").asText(), "DIRECTORY BETA");
+    ResponseEntity<JsonNode> betaFindsAlpha = search(beta.path("token").asText(), alphaName);
 
     assertEquals(HttpStatus.OK, alphaFindsBeta.getStatusCode());
     assertEquals(beta.path("user").path("id").asText(),
@@ -96,6 +100,93 @@ class MongoPersistenceIntegrationTest {
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("email"));
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("passwordHash"));
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("publicKey"));
+  }
+
+  @Test
+  void safelySearchesDisplayNamesContainingRegexCharacters() {
+    String suffix = UUID.randomUUID().toString();
+    String name = "Target [+] User " + suffix;
+    JsonNode owner = registerAndLogin("Regex Search Owner " + suffix, "regex-owner-" + suffix + "@example.test", "valid-test-password-123");
+    JsonNode target = registerAndLogin(name, "regex-target-" + suffix + "@example.test", "valid-test-password-123");
+
+    ResponseEntity<JsonNode> result = search(owner.path("token").asText(), "[+]");
+
+    assertEquals(HttpStatus.OK, result.getStatusCode());
+    assertEquals(1, result.getBody().path("users").size());
+    assertEquals(target.path("user").path("id").asText(), result.getBody().path("users").get(0).path("id").asText());
+  }
+
+  @Test
+  void findsNormalizedEmailExactlyWithoutExposingEmailAndExcludesPrefixes() {
+    String suffix = UUID.randomUUID().toString();
+    String email = "email-search-" + suffix + "@example.test";
+    JsonNode owner = registerAndLogin("Email Search Owner " + suffix, "owner-" + suffix + "@example.test", "valid-test-password-123");
+    JsonNode target = registerAndLogin("Email Search Target " + suffix, email, "valid-test-password-123");
+
+    ResponseEntity<JsonNode> exact = search(owner.path("token").asText(), "  " + email.toUpperCase() + "  ");
+    ResponseEntity<JsonNode> partialAddress = search(owner.path("token").asText(), email.substring(0, email.indexOf('@')) + "@example");
+
+    assertEquals(HttpStatus.OK, exact.getStatusCode());
+    assertEquals(1, exact.getBody().path("users").size());
+    assertEquals(target.path("user").path("id").asText(), exact.getBody().path("users").get(0).path("id").asText());
+    assertFalse(exact.getBody().path("users").get(0).has("email"));
+    assertEquals(HttpStatus.OK, partialAddress.getStatusCode());
+    assertEquals(0, partialAddress.getBody().path("users").size());
+  }
+
+  @Test
+  void verificationPersistsForExactKeyAndBecomesStaleAfterRotation() throws Exception {
+    String suffix = UUID.randomUUID().toString();
+    JsonNode owner = registerAndLogin("Verifier " + suffix, "verifier-" + suffix + "@example.test", "valid-test-password-123");
+    User target = users.save(new User("verify-target-" + suffix + "@example.test", "Verified Target", "encoded-password"));
+    String publicKey = generatePublicKey();
+    String fingerprint = KeyEnrollmentService.fingerprintForPublicKeyBytes(java.util.Base64.getDecoder().decode(publicKey));
+    target.setPublicKey(publicKey);
+    target.setKeyFingerprint(fingerprint);
+    users.save(target);
+    UUID ownerId = UUID.fromString(owner.path("user").path("id").asText());
+    contacts.save(new ContactRelationship(ownerId, target.getId()));
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(owner.path("token").asText());
+    ResponseEntity<JsonNode> verified = http.exchange(
+        "/api/contacts/" + target.getId() + "/verify",
+        HttpMethod.POST,
+        new HttpEntity<>(Map.of("fingerprint", fingerprint, "confirmed", true), headers),
+        JsonNode.class);
+    assertEquals(HttpStatus.OK, verified.getStatusCode());
+    assertTrue(verified.getBody().path("verified").asBoolean());
+
+    ResponseEntity<JsonNode> afterReload = http.exchange(
+        "/api/contacts/" + target.getId(), HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
+    assertTrue(afterReload.getBody().path("verified").asBoolean());
+
+    String rotatedPublicKey = generatePublicKey();
+    target.setPublicKey(rotatedPublicKey);
+    target.setKeyFingerprint(KeyEnrollmentService.fingerprintForPublicKeyBytes(
+        java.util.Base64.getDecoder().decode(rotatedPublicKey)));
+    users.save(target);
+    ResponseEntity<JsonNode> afterRotation = http.exchange(
+        "/api/contacts/" + target.getId(), HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
+    assertFalse(afterRotation.getBody().path("verified").asBoolean());
+    assertTrue(afterRotation.getBody().path("keyChangedSinceVerification").asBoolean());
+  }
+
+  @Test
+  void duplicateFriendRequestsReturnConflict() {
+    String suffix = UUID.randomUUID().toString();
+    JsonNode sender = registerAndLogin("Sender " + suffix, "sender-" + suffix + "@example.test", "valid-test-password-123");
+    JsonNode recipient = registerAndLogin("Recipient " + suffix, "recipient-" + suffix + "@example.test", "valid-test-password-123");
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(sender.path("token").asText());
+    HttpEntity<Map<String, String>> request = new HttpEntity<>(
+        Map.of("recipientId", recipient.path("user").path("id").asText()), headers);
+
+    ResponseEntity<JsonNode> first = http.postForEntity("/api/friend-requests", request, JsonNode.class);
+    ResponseEntity<JsonNode> duplicate = http.postForEntity("/api/friend-requests", request, JsonNode.class);
+
+    assertEquals(HttpStatus.CREATED, first.getStatusCode());
+    assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
   }
 
   @Test
@@ -126,6 +217,12 @@ class MongoPersistenceIntegrationTest {
         Map.of("email", email, "password", password), JsonNode.class);
     assertEquals(HttpStatus.OK, login.getStatusCode());
     return login.getBody();
+  }
+
+  private static String generatePublicKey() throws Exception {
+    java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("EC");
+    generator.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+    return java.util.Base64.getEncoder().encodeToString(generator.generateKeyPair().getPublic().getEncoded());
   }
 
   private ResponseEntity<JsonNode> search(String token, String query) {

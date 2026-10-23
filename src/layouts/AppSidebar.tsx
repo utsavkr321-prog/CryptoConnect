@@ -3,7 +3,6 @@ import {
   Shield,
   LayoutDashboard,
   MessageSquareLock,
-  FlaskConical,
   Cpu,
   Users,
   AlertOctagon,
@@ -17,9 +16,8 @@ import { API_MODE } from '../services';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/chat', icon: MessageSquareLock, label: 'Secure Chat' },
-  { to: '/visualizer', icon: Cpu, label: 'Encryption Visualizer' },
-  { to: '/security-lab', icon: FlaskConical, label: 'Security Lab' },
+  { to: '/chat', icon: MessageSquareLock, label: 'Messaging' },
+  { to: '/cryptography-lab', icon: Cpu, label: 'Cryptography Lab' },
   { to: '/contacts', icon: Users, label: 'Contacts' },
   { to: '/events', icon: AlertOctagon, label: 'Security Events' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -90,7 +88,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
           <span className="text-xs font-semibold text-blue-400">{API_MODE ? 'API Mode' : 'Demo Mode'}</span>
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
-          {API_MODE ? 'Authenticated backend access. E2EE and contact verification are not implemented.' : 'Data is local mock data. No backend messages are sent.'}
+          {API_MODE ? 'Authenticated backend access. Fingerprint verification is available; messaging is not end-to-end encrypted.' : 'Data is local mock data. No backend messages are sent.'}
         </p>
       </div>
 

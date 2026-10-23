@@ -1,5 +1,6 @@
 package com.cryptoconnect.user;
 
+import com.cryptoconnect.auth.KeyEnrollmentService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +39,17 @@ public class ContactController {
         .toList();
   }
 
+  @GetMapping("/{contactId}")
+  public ContactDtos.ContactResponse get(@PathVariable UUID contactId, Authentication authentication) {
+    UUID ownerId = (UUID) authentication.getPrincipal();
+    if (!contacts.existsByOwnerIdAndContactId(ownerId, contactId)) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found");
+    }
+    User contact = users.findById(contactId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact user not found"));
+    return response(contact, verifications.findByOwnerIdAndContactId(ownerId, contactId).orElse(null));
+  }
+
   @PostMapping
   public ResponseEntity<ContactDtos.ContactResponse> add(@Valid @RequestBody ContactDtos.AddContactRequest request, Authentication authentication) {
     UUID ownerId = (UUID) authentication.getPrincipal();
@@ -63,31 +75,65 @@ public class ContactController {
   /**
    * Records an owner's out-of-band comparison of the contact's currently enrolled key fingerprint.
    * Enrollment itself proves the contact possesses its private key; this action records the owner's
-   * separate identity check and never accepts a caller-provided fingerprint.
+   * separate identity check and validates the submitted comparison against the current public key.
    */
   @PostMapping("/{contactId}/verify")
-  public ContactDtos.ContactResponse verify(@PathVariable UUID contactId, Authentication authentication) {
+  public ContactDtos.ContactResponse verify(
+      @PathVariable UUID contactId,
+      @Valid @RequestBody ContactDtos.VerifyContactRequest request,
+      Authentication authentication) {
     UUID ownerId = (UUID) authentication.getPrincipal();
+    if (ownerId.equals(contactId)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot verify your own identity key as a contact");
+    }
     if (!contacts.existsByOwnerIdAndContactId(ownerId, contactId)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found");
     }
     User contact = users.findById(contactId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact user not found"));
-    String fingerprint = contact.getKeyFingerprint();
-    if (fingerprint == null || fingerprint.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "This contact has not enrolled an identity key");
+    String fingerprint = currentFingerprint(contact);
+    if (fingerprint == null) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "This contact has not enrolled a valid identity key");
+    }
+    String submittedFingerprint = normalizeFingerprint(request.fingerprint());
+    if (!submittedFingerprint.equals(fingerprint)) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "The compared fingerprint does not match the contact's current identity key");
     }
     ContactVerification verification = verifications.findByOwnerIdAndContactId(ownerId, contactId)
         .map(existing -> { existing.updateFingerprint(fingerprint); return existing; })
         .orElseGet(() -> new ContactVerification(ownerId, contactId, fingerprint));
     verifications.save(verification);
-    return response(contact, verification);
+    User currentContact = users.findById(contactId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact user not found"));
+    return response(currentContact, verification);
   }
 
   private static ContactDtos.ContactResponse response(User user, ContactVerification verification) {
-    String fingerprint = user.getKeyFingerprint();
+    String fingerprint = currentFingerprint(user);
     boolean verified = fingerprint != null && verification != null && fingerprint.equals(verification.getContactKeyFingerprint());
-    return new ContactDtos.ContactResponse(user.getId(), user.getDisplayName(), user.getEmail(), fingerprint, verified,
+    boolean keyChangedSinceVerification = verification != null && !verified;
+    return new ContactDtos.ContactResponse(user.getId(), user.getDisplayName(), user.getEmail(), user.getPublicKey(), fingerprint, verified, keyChangedSinceVerification,
         verified ? verification.getVerifiedAt() : null);
+  }
+
+  private static String currentFingerprint(User user) {
+    if (user.getPublicKey() == null || user.getPublicKey().isBlank()) return null;
+    try {
+      byte[] publicKeyBytes = java.util.Base64.getDecoder().decode(user.getPublicKey());
+      return publicKeyBytes.length == 0 ? null : KeyEnrollmentService.fingerprintForPublicKeyBytes(publicKeyBytes);
+    } catch (IllegalArgumentException malformedKey) {
+      return null;
+    }
+  }
+
+  private static String normalizeFingerprint(String value) {
+    if (value == null || !value.matches("(?i)[0-9a-f: \\t\\r\\n-]+")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fingerprint must contain only hexadecimal digits and supported separators");
+    }
+    String normalized = value.replaceAll("[:\\s-]", "").toUpperCase(java.util.Locale.ROOT);
+    if (!normalized.matches("[0-9A-F]{64}")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fingerprint must be a complete SHA-256 value");
+    }
+    return normalized;
   }
 }

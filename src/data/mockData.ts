@@ -278,8 +278,8 @@ export const INITIAL_SECURITY_TESTS: SecurityTest[] = [
   },
   {
     id: 'test-004',
-    name: 'SHA-256 Fingerprint Generation',
-    description: 'Generates a SHA-256 digest of a demo string and validates the fingerprint format.',
+    name: 'SHA-256 Sample-Input Fingerprint',
+    description: 'Hashes a fixed sample string and validates the grouped fingerprint format; this is not an identity-key verification.',
     status: 'not_run',
     isReal: true,
   },
@@ -289,20 +289,6 @@ export const INITIAL_SECURITY_TESTS: SecurityTest[] = [
     description: 'Generates 100 random 96-bit IVs and verifies no duplicates (collision resistance demo).',
     status: 'not_run',
     isReal: true,
-  },
-  {
-    id: 'test-006',
-    name: 'Simulated Key Exchange',
-    description: 'Simulates a Diffie-Hellman key exchange handshake (demonstration only — not real network).',
-    status: 'not_run',
-    isReal: false,
-  },
-  {
-    id: 'test-007',
-    name: 'Simulated Forward Secrecy',
-    description: 'Demonstrates the concept of ephemeral keys and forward secrecy (simulation).',
-    status: 'not_run',
-    isReal: false,
   },
 ];
 

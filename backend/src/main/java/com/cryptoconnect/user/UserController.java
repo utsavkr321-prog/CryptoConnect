@@ -15,10 +15,14 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController @RequestMapping("/api/users") public class UserController {
   private final UserRepository users; public UserController(UserRepository users) { this.users = users; }
   @GetMapping public DirectoryPage list(@RequestParam(defaultValue = "") String query, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication auth) {
-    if (query.trim().length() == 1 || query.length() > 120) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search query must be empty or between 2 and 120 characters");
+    String normalizedQuery = query.trim();
+    if (normalizedQuery.contains("@")) normalizedQuery = normalizedQuery.toLowerCase(java.util.Locale.ROOT);
+    if (normalizedQuery.length() == 1 || normalizedQuery.length() > 120) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search query must be empty or between 2 and 120 characters");
     if (page < 0 || size < 1 || size > 50) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination");
     UUID me = (UUID) auth.getPrincipal();
-    List<User> rows = users.findDirectory(query.trim(), page, size).stream().filter(user -> !user.getId().equals(me)).toList();
+    List<User> rows = users.findDirectory(normalizedQuery, page, size, me).stream()
+        .filter(user -> !user.getId().equals(me))
+        .toList();
     boolean hasMore = rows.size() > size;
     return new DirectoryPage(rows.stream().limit(size).map(user -> new DirectoryUser(user.getId(), user.getDisplayName(), user.getCreatedAt())).toList(), page, hasMore);
   }

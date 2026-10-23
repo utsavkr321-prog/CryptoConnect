@@ -32,9 +32,11 @@ export interface Contact {
   id: string;
   name: string;
   email?: string;
+  publicKey?: string;
   avatar?: string;
   status: 'online' | 'offline' | 'away' | 'unknown';
   verified: boolean;
+  keyChangedSinceVerification?: boolean;
   publicKeyFingerprint: string;
   lastSeen: string;
   addedAt: string;

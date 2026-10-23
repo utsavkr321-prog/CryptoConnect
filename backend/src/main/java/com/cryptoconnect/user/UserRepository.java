@@ -40,15 +40,19 @@ public class UserRepository {
             .set("updatedAt", java.time.Instant.now());
     return mongo.updateFirst(query, update, User.class).getModifiedCount() == 1;
   }
-  public List<User> findTop20ByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(String email, String name) {
-    Pattern emailPattern = containsIgnoreCase(email);
-    Pattern namePattern = containsIgnoreCase(name);
-    Query query = Query.query(new Criteria().orOperator(Criteria.where("email").regex(emailPattern), Criteria.where("displayName").regex(namePattern))).limit(20);
-    return mongo.find(query, User.class);
-  }
-  public List<User> findDirectory(String query, int page, int size) {
+  public List<User> findDirectory(String query, int page, int size, UUID excludedUserId) {
     Query request = new Query();
-    if (query != null && !query.isBlank()) request.addCriteria(Criteria.where("displayName").regex(containsIgnoreCase(query.trim())));
+    String value = query == null ? "" : query.trim();
+    if (!value.isEmpty()) {
+      Criteria displayNameMatch = Criteria.where("displayName").regex(containsIgnoreCase(value));
+      if (value.contains("@")) {
+        Criteria emailMatch = Criteria.where("email").regex(exactIgnoreCase(value.toLowerCase(java.util.Locale.ROOT)));
+        request.addCriteria(new Criteria().orOperator(displayNameMatch, emailMatch));
+      } else {
+        request.addCriteria(displayNameMatch);
+      }
+    }
+    request.addCriteria(Criteria.where("id").ne(excludedUserId));
     request.with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt", "id"));
     request.skip((long) page * size).limit(size + 1);
     return mongo.find(request, User.class);

@@ -7,8 +7,7 @@ import { ToastContainer } from './components/ToastNotification';
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })));
-const EncryptionVisualizerPage = lazy(() => import('./pages/EncryptionVisualizerPage').then((module) => ({ default: module.EncryptionVisualizerPage })));
-const SecurityLabPage = lazy(() => import('./pages/SecurityLabPage').then((module) => ({ default: module.SecurityLabPage })));
+const CryptographyLabPage = lazy(() => import('./pages/CryptographyLabPage').then((module) => ({ default: module.CryptographyLabPage })));
 const ContactsPage = lazy(() => import('./pages/ContactsPage').then((module) => ({ default: module.ContactsPage })));
 const EventsPage = lazy(() => import('./pages/EventsPage').then((module) => ({ default: module.EventsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })));
@@ -77,8 +76,9 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LazyPage><LoginPage /></LazyPage></PublicRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><LazyPage><DashboardPage /></LazyPage></ProtectedRoute>} />
       <Route path="/chat" element={<ProtectedRoute><LazyPage><ChatPage /></LazyPage></ProtectedRoute>} />
-      <Route path="/visualizer" element={<ProtectedRoute><LazyPage><EncryptionVisualizerPage /></LazyPage></ProtectedRoute>} />
-      <Route path="/security-lab" element={<ProtectedRoute><LazyPage><SecurityLabPage /></LazyPage></ProtectedRoute>} />
+      <Route path="/cryptography-lab" element={<ProtectedRoute><LazyPage><CryptographyLabPage /></LazyPage></ProtectedRoute>} />
+      <Route path="/visualizer" element={<Navigate to="/cryptography-lab" replace />} />
+      <Route path="/security-lab" element={<Navigate to="/cryptography-lab" replace />} />
       <Route path="/contacts" element={<ProtectedRoute><LazyPage><ContactsPage /></LazyPage></ProtectedRoute>} />
       <Route path="/events" element={<ProtectedRoute><LazyPage><EventsPage /></LazyPage></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><LazyPage><SettingsPage /></LazyPage></ProtectedRoute>} />

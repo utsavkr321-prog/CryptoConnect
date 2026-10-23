@@ -21,16 +21,6 @@ import { INITIAL_SECURITY_TESTS } from '../data/mockData';
 async function runTest(test: SecurityTest): Promise<{ status: TestStatus; result: string; duration: number }> {
   const start = Date.now();
 
-  if (!test.isReal) {
-    // Simulated test — just delay and return simulated result
-    await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
-    return {
-      status: 'passed',
-      result: `[SIMULATED] ${test.name} concept demonstration passed.`,
-      duration: Date.now() - start,
-    };
-  }
-
   try {
     switch (test.id) {
       case 'test-001': {
@@ -62,9 +52,9 @@ async function runTest(test: SecurityTest): Promise<{ status: TestStatus; result
 
       case 'test-004': {
         const fp = await computeFingerprint('CryptoConnect Demo Public Key v1.0');
-        const isValidFormat = /^[0-9A-F]{2}(:[0-9A-F]{2}){31}$/.test(fp);
+        const isValidFormat = /^[0-9A-F]{8}(?::[0-9A-F]{8}){7}$/.test(fp);
         if (!isValidFormat) throw new Error('Fingerprint format invalid');
-        return { status: 'passed', result: `SHA-256 fingerprint: ${fp.slice(0, 23)}…`, duration: Date.now() - start };
+        return { status: 'passed', result: `Sample-input SHA-256: ${fp.slice(0, 23)}…`, duration: Date.now() - start };
       }
 
       case 'test-005': {
@@ -147,7 +137,7 @@ function PlaintextCiphertextDemo() {
 // ─── Fingerprint Demo ─────────────────────────────────────────────────────────
 
 function FingerprintDemo() {
-  const [input, setInput] = useState('mock-public-key-data-for-alex-reeves@cryptoconnect');
+  const [input, setInput] = useState('CryptoConnect sample text');
   const [fingerprint, setFingerprint] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -166,7 +156,7 @@ function FingerprintDemo() {
     <div className="card p-5">
       <div className="flex items-center gap-2 mb-4">
         <Fingerprint size={16} className="text-emerald-400" />
-        <h3 className="text-sm font-semibold text-slate-200">SHA-256 Key Fingerprint</h3>
+        <h3 className="text-sm font-semibold text-slate-200">SHA-256 Data Fingerprint</h3>
       </div>
       <input
         type="text"
@@ -187,7 +177,7 @@ function FingerprintDemo() {
       <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/15 mb-3">
         <Info size={12} className="text-blue-400 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-blue-300/80">
-          A fingerprint proves the data hasn't changed, but does NOT prove identity. In a real system, fingerprints must be verified out-of-band (e.g., by reading them aloud in person).
+          This hashes the UTF-8 bytes in the input field. It is a data-hash demo, not a public-key fingerprint or proof of identity; compare identity-key fingerprints out of band.
         </p>
       </div>
       <button
@@ -233,7 +223,6 @@ export function SecurityLabPage() {
 
   const passed = tests.filter((t) => t.status === 'passed').length;
   const verifiedPassed = tests.filter((t) => t.isReal && t.status === 'passed').length;
-  const simulatedPassed = tests.filter((t) => !t.isReal && t.status === 'passed').length;
   const failed = tests.filter((t) => t.status === 'failed').length;
   const total = tests.length;
 
@@ -248,9 +237,7 @@ export function SecurityLabPage() {
           <div className="flex-1">
             <h2 className="font-bold text-slate-100 mb-1">Security Lab</h2>
             <p className="text-sm text-slate-400">
-              Run real local cryptographic tests and explore security concepts interactively. Tests marked{' '}
-              <span className="text-emerald-400 font-medium">"Real"</span> execute genuine Web Crypto API operations.{' '}
-              <span className="text-amber-400 font-medium">"Simulated"</span> tests demonstrate concepts only.
+              Run genuine browser-local Web Crypto checks. These operations validate the named primitive behavior only; they are not a complete messaging protocol or a system-wide security audit.
             </p>
           </div>
         </div>
@@ -269,7 +256,7 @@ export function SecurityLabPage() {
             <h3 className="font-semibold text-slate-200 text-sm">Security Test Suite</h3>
             {total > 0 && (
               <p className="text-xs text-slate-500 mt-0.5">
-                {verifiedPassed} local checks passed · {simulatedPassed} simulated demos passed · {failed} failed
+                {verifiedPassed} local checks passed · {failed} failed
               </p>
             )}
           </div>
