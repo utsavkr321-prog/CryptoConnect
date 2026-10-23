@@ -21,11 +21,14 @@ V7 renames the original `encrypted_messages` table to `messages`. Existing rows 
 | GET | `/api/auth/me` | Restores the authenticated session. |
 | POST | `/api/auth/logout` | Revokes the presented JWT ID in MongoDB and returns 204. |
 | PATCH | `/api/auth/me` | Changes only the authenticated user's display name. |
+| POST | `/api/auth/me/key/challenge` | Authenticated; creates a one-time key-enrollment challenge that expires after 10 minutes. |
+| POST | `/api/auth/me/key` | Authenticated; verifies a P-256 proof of possession and stores only the public key and fingerprint. An existing key must be explicitly removed before replacement. |
+| DELETE | `/api/auth/me/key` | Removes the caller's enrolled public key. The private key remains in browser storage. |
 | GET | `/api/dashboard/stats` | Returns conversation, sent, stored and unread message counts for the caller. |
 | GET | `/api/dashboard/activity?days=7` | Returns daily message counts for 1-30 days. |
 | GET | `/api/security-events` | Returns up to 100 recent events for the caller. |
 | POST | `/api/security-events` | Accepts allowlisted educational demo event types; server assigns safe descriptions. |
-| GET | `/api/users?query=` | Searches registered users; excludes the caller. |
+| GET | `/api/users?query=` | Authenticated, paginated, case-insensitive display-name search (minimum 2 characters when nonempty); excludes the caller and returns only ID, name, and registration date. |
 | GET/POST | `/api/contacts` | Lists or creates a caller-owned contact relationship. |
 | DELETE | `/api/contacts/{contactId}` | Removes only the caller's relationship. |
 | POST | `/api/conversations` | Opens or creates a one-to-one conversation for `recipientId`. |
@@ -48,4 +51,4 @@ A recipient acknowledges delivery with `{ "type": "ack", "messageId": "<uuid>" }
 
 ## Other security controls
 
-Login, registration, search, contact/security-event writes and WebSocket operations have configurable process-local rate limits. Multi-instance deployments need a trusted gateway or shared limiter. REST responses include restrictive security headers. JWT revocation is persisted in MongoDB. No device-key registration, identity verification or E2EE protocol is implemented.
+Login, registration, search, contact/security-event writes and WebSocket operations have configurable process-local rate limits. Multi-instance deployments need a trusted gateway or shared limiter. REST responses include restrictive security headers. JWT revocation is persisted in MongoDB. Identity-key enrollment proves possession of a browser-held P-256 private key; it does not establish real-world identity or provide E2EE.

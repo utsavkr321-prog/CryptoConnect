@@ -1,6 +1,7 @@
 package com.cryptoconnect.auth;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
@@ -12,7 +13,7 @@ public final class KeyEnrollmentDtos {
 
   /** Submitted by the client to complete key enrollment. */
   public record EnrollRequest(
-      @NotBlank UUID challengeId,
+      @NotNull UUID challengeId,
       /** Must be exactly {@code "EC/P-256"}. */
       @NotBlank @Size(max = 20) String algorithm,
       /** SubjectPublicKeyInfo bytes (SPKI), base64-standard-encoded. */

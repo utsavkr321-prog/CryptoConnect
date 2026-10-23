@@ -126,6 +126,10 @@ public class KeyEnrollmentService {
             .orElseThrow(
                 () ->
                     new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+    if (user.getPublicKey() != null || user.getKeyFingerprint() != null) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "An identity key is already enrolled; remove it before enrolling a replacement");
+    }
     user.setPublicKey(req.publicKey());
     user.setKeyFingerprint(fingerprint);
     users.save(user);

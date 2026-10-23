@@ -25,7 +25,10 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     let body: { error?: string; fields?: Record<string, string> } = {};
     try { body = await response.json(); } catch { /* empty error body */ }
     if (response.status === 401) clearToken();
-    const message = response.status === 401 ? 'Invalid or expired credentials.' : body.error ?? (response.status === 409 ? 'This resource already exists.' : `Request failed (${response.status}).`);
+    const serverError = response.status >= 500
+      ? `The server could not complete this request (HTTP ${response.status}). Please try again; if it continues, contact support.`
+      : undefined;
+    const message = response.status === 401 ? 'Invalid or expired credentials.' : body.error && body.error !== 'Internal server error' ? body.error : serverError ?? (response.status === 409 ? 'This resource already exists.' : `Request failed (${response.status}).`);
     throw new ApiError(response.status, message, body.fields);
   }
   return response.status === 204 ? (undefined as T) : await response.json() as T;

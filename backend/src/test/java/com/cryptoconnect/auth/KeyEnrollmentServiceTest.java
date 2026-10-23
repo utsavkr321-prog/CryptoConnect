@@ -3,6 +3,7 @@ package com.cryptoconnect.auth;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.cryptoconnect.user.User;
@@ -89,5 +90,58 @@ class KeyEnrollmentServiceTest {
         new KeyEnrollmentDtos.EnrollRequest(challengeId, "EC/P-256",
             Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()),
             Base64.getEncoder().encodeToString(signer.sign()))));
+  }
+
+  @Test void rejectsAnInvalidSignatureAndDoesNotPersistTheKey() throws Exception {
+    UUID userId = UUID.randomUUID();
+    UUID challengeId = UUID.randomUUID();
+    byte[] challengeBytes = "signed-challenge".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+    generator.initialize(new ECGenParameterSpec("secp256r1"));
+    KeyPair keyPair = generator.generateKeyPair();
+    KeyPair otherKeyPair = generator.generateKeyPair();
+    Signature signer = Signature.getInstance("SHA256withECDSAinP1363Format");
+    signer.initSign(otherKeyPair.getPrivate());
+    signer.update(challengeBytes);
+    when(challenges.findByIdAndUserId(challengeId, userId)).thenReturn(Optional.of(new KeyChallenge(
+        challengeId, userId, Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes), Instant.now())));
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> service.enrollKey(userId,
+        new KeyEnrollmentDtos.EnrollRequest(challengeId, "EC/P-256",
+            Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+            Base64.getEncoder().encodeToString(signer.sign()))));
+
+    assertEquals(org.springframework.http.HttpStatus.UNAUTHORIZED, error.getStatusCode());
+    verify(challenges).delete(org.mockito.ArgumentMatchers.any(KeyChallenge.class));
+    verifyNoInteractions(users);
+  }
+
+  @Test void doesNotReplaceAnAlreadyEnrolledKey() throws Exception {
+    UUID userId = UUID.randomUUID();
+    UUID challengeId = UUID.randomUUID();
+    byte[] challengeBytes = "new-proof".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+    generator.initialize(new ECGenParameterSpec("secp256r1"));
+    KeyPair keyPair = generator.generateKeyPair();
+    Signature signer = Signature.getInstance("SHA256withECDSAinP1363Format");
+    signer.initSign(keyPair.getPrivate());
+    signer.update(challengeBytes);
+    when(challenges.findByIdAndUserId(challengeId, userId)).thenReturn(Optional.of(new KeyChallenge(
+        challengeId, userId, Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes), Instant.now())));
+    User user = new User("user@example.test", "User", "hash");
+    user.setPublicKey("previous-public-key");
+    user.setKeyFingerprint("previous-fingerprint");
+    when(users.findById(userId)).thenReturn(Optional.of(user));
+
+    ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> service.enrollKey(userId,
+        new KeyEnrollmentDtos.EnrollRequest(challengeId, "EC/P-256",
+            Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+            Base64.getEncoder().encodeToString(signer.sign()))));
+
+    assertEquals(org.springframework.http.HttpStatus.CONFLICT, error.getStatusCode());
+    assertEquals("previous-public-key", user.getPublicKey());
+    assertEquals("previous-fingerprint", user.getKeyFingerprint());
+    verify(challenges).delete(org.mockito.ArgumentMatchers.any(KeyChallenge.class));
+    verify(users, org.mockito.Mockito.never()).save(user);
   }
 }
