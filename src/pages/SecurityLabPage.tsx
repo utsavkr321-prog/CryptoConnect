@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
-  FlaskConical, Play, CheckCircle, XCircle, Clock, RefreshCw,
-  Shield, Info, Fingerprint, AlertTriangle, Eye,
+  FlaskConical, Play, RefreshCw,
+  Shield, Info, Fingerprint, Eye,
 } from 'lucide-react';
 import {
   generateAESKey,

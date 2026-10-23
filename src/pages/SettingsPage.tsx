@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
-  User, Bell, Shield, Monitor, Trash2, Info, ChevronRight,
-  Moon, Volume2, VolumeX, Eye, Lock, Clock,
+  User, Bell, Shield, Monitor, Trash2, Info,
+  Lock,
 } from 'lucide-react';
 import { useAuth, useSettingsCtx } from '../context/AppContext';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { useToast } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
 import { API_MODE, authService, identityKeyService } from '../services';
 
 function Section({ title, icon: Icon, children }: { title: string; icon: typeof User; children: React.ReactNode }) {
@@ -94,7 +93,6 @@ export function SettingsPage() {
   const { settings, updateSetting, resetSettings } = useSettingsCtx();
   const { user, updateUser } = useAuth();
   const { addToast } = useToast();
-  const navigate = useNavigate();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
   const [profileBusy, setProfileBusy] = useState(false);

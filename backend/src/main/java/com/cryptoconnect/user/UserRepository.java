@@ -1,6 +1,7 @@
 package com.cryptoconnect.user;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -24,6 +25,9 @@ public class UserRepository {
   }
   public User save(User user) { return mongo.save(user); }
   public Optional<User> findByEmailIgnoreCase(String email) {
+    String normalizedEmail = email.toLowerCase(Locale.ROOT);
+    User canonicalMatch = mongo.findOne(Query.query(Criteria.where("email").is(normalizedEmail)), User.class);
+    if (canonicalMatch != null) return Optional.of(canonicalMatch);
     return Optional.ofNullable(mongo.findOne(Query.query(Criteria.where("email").regex(exactIgnoreCase(email))), User.class));
   }
   public boolean existsByEmailIgnoreCase(String email) { return findByEmailIgnoreCase(email).isPresent(); }

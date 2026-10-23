@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   MessageSquare, Send, ShieldCheck, Users, Lock,
-  Activity, Clock, ArrowRight, Zap,
+  Activity, Clock, ArrowRight,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {

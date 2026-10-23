@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import {
-  Lock, Unlock, Send, ArrowRight, AlertTriangle,
-  CheckCircle, XCircle, Info, RefreshCw, Eye, EyeOff,
-  Cpu, Zap, Shield,
+  Lock, ArrowRight, AlertTriangle,
+  CheckCircle, XCircle, Info, RefreshCw,
+  Cpu, Shield,
 } from 'lucide-react';
 import {
   generateAESKey,

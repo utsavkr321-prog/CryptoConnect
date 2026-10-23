@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Search, Filter, Shield, AlertTriangle, CheckCircle, XCircle,
+  Search, Shield, AlertTriangle, CheckCircle, XCircle,
   Info, Clock, RefreshCw, AlertOctagon,
 } from 'lucide-react';
 import { API_MODE, securityEventService } from '../services';

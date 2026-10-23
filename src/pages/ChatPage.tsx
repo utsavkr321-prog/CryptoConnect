@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  Search, Send, Copy, Check, CheckCheck, MoreVertical, UserPlus, ArrowLeft,
-  Shield, ShieldCheck, Clock, MessageSquare, Phone, Info, X, UserCheck,
+  Search, Send, Copy, Check, CheckCheck, UserPlus, ArrowLeft,
+  Shield, ShieldCheck, MessageSquare, Info, UserCheck,
 } from 'lucide-react';
 import { ApiError, API_MODE, authService, contactService, conversationService, friendService, presenceService } from '../services';
 import { createChatRealtimeClient, type RealtimeStatus } from '../services/realtime';

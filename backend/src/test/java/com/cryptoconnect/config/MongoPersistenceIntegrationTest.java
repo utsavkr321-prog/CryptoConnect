@@ -14,6 +14,7 @@ import com.cryptoconnect.user.User;
 import com.cryptoconnect.user.UserRepository;
 import com.cryptoconnect.user.ContactRepository;
 import com.cryptoconnect.user.ContactRelationship;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,16 @@ class MongoPersistenceIntegrationTest {
     assertEquals("Mongo Integration", found.getDisplayName());
     assertNotNull(found.getCreatedAt());
     assertEquals("cryptoconnect_integration_test", mongo.getDb().getName());
+  }
+
+  @Test
+  void findsLegacyMixedCaseEmailsWhenCanonicalLookupMisses() {
+    String email = "legacy-" + UUID.randomUUID() + "@example.test";
+    User saved = users.save(new User(email.toUpperCase(Locale.ROOT), "Legacy Account", "encoded-password"));
+
+    User found = users.findByEmailIgnoreCase(email).orElseThrow();
+
+    assertEquals(saved.getId(), found.getId());
   }
 
   @Test

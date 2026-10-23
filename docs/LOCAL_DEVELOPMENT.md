@@ -14,6 +14,16 @@ The script accepts only `localhost` or `127.0.0.1` and the `cryptoconnect_local_
 
 The default API origin is `http://127.0.0.1:8080`; authenticated WebSocket uses the matching `ws://127.0.0.1:8080/ws`. Readiness is `/health/ready`; liveness is `/health/live`.
 
+## Login timing diagnostics
+
+The authentication controller emits privacy-safe phase durations at DEBUG level for
+user lookup, password verification, security-event persistence, token creation, and
+controller total time. To enable them in a local backend session, set
+`LOGGING_LEVEL_COM_CRYPTOCONNECT_AUTH_AUTHCONTROLLER=DEBUG` before starting it. The
+log does not include email addresses, passwords, tokens, or user/session identifiers.
+Use the browser Network panel to separately inspect login request duration and
+post-login dashboard requests; do not infer backend time from dashboard loading.
+
 ## Frontend
 
 In a separate terminal, from the repository root:
