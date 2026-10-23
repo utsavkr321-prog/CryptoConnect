@@ -56,12 +56,11 @@ public class KeyEnrollmentService {
     // Load and immediately delete the single-use challenge
     KeyChallenge challenge =
         challengeRepo
-            .findByIdAndUserId(req.challengeId(), userId)
+            .consumeByIdAndUserId(req.challengeId(), userId)
             .orElseThrow(
                 () ->
                     new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Challenge not found or already used"));
-    challengeRepo.delete(challenge);
 
     // Reject expired challenges
     if (Instant.now().isAfter(challenge.getCreatedAt().plus(CHALLENGE_TTL))) {
@@ -126,13 +125,10 @@ public class KeyEnrollmentService {
             .orElseThrow(
                 () ->
                     new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
-    if (user.getPublicKey() != null || user.getKeyFingerprint() != null) {
+    if (!users.enrollIdentityKeyIfAbsent(userId, req.publicKey(), fingerprint)) {
       throw new ResponseStatusException(
           HttpStatus.CONFLICT, "An identity key is already enrolled; remove it before enrolling a replacement");
     }
-    user.setPublicKey(req.publicKey());
-    user.setKeyFingerprint(fingerprint);
-    users.save(user);
 
     return new KeyEnrollmentDtos.KeyInfo(fingerprint);
   }

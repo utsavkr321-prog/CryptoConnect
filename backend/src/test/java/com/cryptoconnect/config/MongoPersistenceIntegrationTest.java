@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.cryptoconnect.auth.KeyChallenge;
+import com.cryptoconnect.auth.KeyChallengeRepository;
 import com.cryptoconnect.user.User;
 import com.cryptoconnect.user.UserRepository;
 import java.util.Map;
@@ -38,6 +40,7 @@ class MongoPersistenceIntegrationTest {
 
   @Autowired private MongoTemplate mongo;
   @Autowired private UserRepository users;
+  @Autowired private KeyChallengeRepository challenges;
   @Autowired private TestRestTemplate http;
 
   @DynamicPropertySource
@@ -93,6 +96,25 @@ class MongoPersistenceIntegrationTest {
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("email"));
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("passwordHash"));
     assertFalse(alphaFindsBeta.getBody().path("users").get(0).has("publicKey"));
+  }
+
+  @Test
+  void challengeConsumptionAndIdentityKeyEnrollmentAreAtomic() {
+    UUID userId = UUID.randomUUID();
+    UUID challengeId = UUID.randomUUID();
+    challenges.save(new KeyChallenge(challengeId, userId, "single-use-value", java.time.Instant.now()));
+
+    assertFalse(challenges.consumeByIdAndUserId(challengeId, UUID.randomUUID()).isPresent());
+    assertTrue(challenges.consumeByIdAndUserId(challengeId, userId).isPresent());
+    assertFalse(challenges.consumeByIdAndUserId(challengeId, userId).isPresent());
+
+    User user = users.save(new User("atomic-" + UUID.randomUUID() + "@example.test", "Atomic User", "hash"));
+    assertTrue(users.enrollIdentityKeyIfAbsent(user.getId(), "first-public-key", "first-fingerprint"));
+    assertFalse(users.enrollIdentityKeyIfAbsent(user.getId(), "second-public-key", "second-fingerprint"));
+
+    User stored = users.findById(user.getId()).orElseThrow();
+    assertEquals("first-public-key", stored.getPublicKey());
+    assertEquals("first-fingerprint", stored.getKeyFingerprint());
   }
 
   private JsonNode registerAndLogin(String name, String email, String password) {
