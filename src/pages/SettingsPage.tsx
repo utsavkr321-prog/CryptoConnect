@@ -11,12 +11,14 @@ import { API_MODE, authService, identityKeyService } from '../services';
 
 function Section({ title, icon: Icon, children }: { title: string; icon: typeof User; children: React.ReactNode }) {
   return (
-    <div className="card overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800/60">
-        <Icon size={15} className="text-emerald-400" />
-        <h3 className="font-semibold text-slate-200 text-sm">{title}</h3>
+    <div className="card overflow-hidden border border-white/5">
+      <div className="flex items-center gap-2 border-b border-white/6 bg-[#101923]/80 px-5 py-4">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-500/15 bg-indigo-500/6 text-indigo-200">
+          <Icon size={15} />
+        </div>
+        <h3 className="text-sm font-semibold tracking-[0.08em] text-slate-100 uppercase">{title}</h3>
       </div>
-      <div className="divide-y divide-slate-800/50">{children}</div>
+      <div className="divide-y divide-white/6">{children}</div>
     </div>
   );
 }
@@ -43,10 +45,10 @@ function ToggleRow({
         aria-label={label}
         aria-checked={value}
         onClick={() => onChange(!value)}
-        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${value ? 'bg-emerald-500' : 'bg-slate-700'}`}
+        className={`relative h-6 w-11 rounded-full border transition-colors duration-200 ${value ? 'border-emerald-500/40 bg-emerald-500/20' : 'border-slate-700 bg-slate-800'}`}
       >
         <span
-          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${value ? 'translate-x-5' : 'translate-x-0'}`}
+          className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${value ? 'translate-x-5' : 'translate-x-0'}`}
         />
       </button>
     </div>
@@ -78,7 +80,7 @@ function SelectRow<T extends string>({
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-emerald-500"
+        className="rounded-lg border border-white/8 bg-[#101923] px-3 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-500/40"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -138,7 +140,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl space-y-5">
+    <div className="page-shell mx-auto max-w-2xl space-y-5 p-4 md:p-6">
       {/* Profile */}
       <Section title="Profile" icon={User}>
         <div className="px-5 py-4">

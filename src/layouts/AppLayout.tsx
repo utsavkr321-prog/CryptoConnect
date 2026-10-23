@@ -52,57 +52,48 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   return (
-    <div className="app-shell flex overflow-hidden bg-[#0b1020]">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex flex-shrink-0">
+    <div className="app-shell cyber-shell flex overflow-hidden">
+      <div className="hidden flex-shrink-0 lg:flex">
         <AppSidebar />
       </div>
 
-      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div ref={navigationDialogRef} className="lg:hidden fixed inset-0 z-40 flex" role="dialog" aria-modal="true" aria-label="Main navigation">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={closeSidebar}
-          />
+        <div ref={navigationDialogRef} className="fixed inset-0 z-40 flex lg:hidden" role="dialog" aria-modal="true" aria-label="Main navigation">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeSidebar} />
           <div className="relative z-50 h-full min-h-0 flex-shrink-0">
             <AppSidebar onClose={closeSidebar} />
           </div>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Navbar */}
-        <header className="flex items-center justify-between px-4 md:px-6 py-3.5 border-b border-slate-800/60 bg-[#080d1a]/80 backdrop-blur-sm flex-shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex flex-shrink-0 items-center justify-between border-b border-white/8 bg-[#0a1018]/85 px-4 py-3.5 backdrop-blur-sm md:px-6">
           <div className="flex items-center gap-3">
             <button
               ref={menuButtonRef}
-              className="lg:hidden min-h-11 min-w-11 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors rounded-lg"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/6 bg-white/3 text-slate-300 transition hover:border-indigo-500/20 hover:text-white lg:hidden"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open menu"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
             <div>
-              <h2 className="font-semibold text-slate-100 text-sm md:text-base">{page.title}</h2>
-              {page.subtitle && (
-                <p className="text-xs text-slate-500 hidden sm:block">{page.subtitle}</p>
-              )}
+              <h2 className="text-sm font-semibold tracking-[0.08em] text-white md:text-base">{page.title}</h2>
+              {page.subtitle && <p className="hidden text-xs text-slate-400 sm:block">{page.subtitle}</p>}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Encryption status pill */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span className="text-xs font-medium text-emerald-400">{import.meta.env.VITE_APP_MODE === 'api' ? 'API Session' : 'Demo Session'}</span>
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1.5 sm:flex">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(39,214,206,0.7)]" />
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                {import.meta.env.VITE_APP_MODE === 'api' ? 'API Session' : 'Demo Session'}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
+        <main className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain bg-[radial-gradient(circle_at_top,_rgba(91,97,246,0.07),_transparent_30%)]">
           {children}
         </main>
       </div>

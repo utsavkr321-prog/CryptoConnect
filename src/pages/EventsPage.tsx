@@ -77,26 +77,46 @@ export function EventsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-5xl">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Success', count: counts.success, color: 'emerald' },
-          { label: 'Info', count: counts.info, color: 'blue' },
-          { label: 'Warning', count: counts.warning, color: 'amber' },
-          { label: 'Critical', count: counts.critical, color: 'red' },
-        ].map(({ label, count, color }) => (
+    <div className="page-shell mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+      <div className="cyber-panel rounded-[1.4rem] p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-indigo-200">Security timeline</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Event monitor</h2>
+          </div>
           <button
-            type="button"
-            key={label}
-            className={`card p-4 text-center border-${color}-500/20 cursor-pointer hover:border-${color}-500/40 transition-all`}
-            aria-pressed={severityFilter === label.toLowerCase()}
-            onClick={() => setSeverityFilter(label.toLowerCase() as EventSeverity)}
+            onClick={loadEvents}
+            className="btn-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs"
+            aria-label="Refresh"
           >
-            <p className={`text-2xl font-bold text-${color}-400`}>{count}</p>
-            <p className="text-xs text-slate-500 mt-1">{label}</p>
+            <RefreshCw size={14} />
+            Refresh
           </button>
-        ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            { label: 'Success', count: counts.success, color: 'emerald' },
+            { label: 'Info', count: counts.info, color: 'blue' },
+            { label: 'Warning', count: counts.warning, color: 'amber' },
+            { label: 'Critical', count: counts.critical, color: 'red' },
+          ].map(({ label, count, color }) => (
+            <button
+              type="button"
+              key={label}
+              className={`rounded-2xl border p-4 text-center transition-all ${
+                color === 'emerald' ? 'border-emerald-500/20 bg-emerald-500/6 hover:border-emerald-400/40' :
+                color === 'blue' ? 'border-indigo-500/20 bg-indigo-500/6 hover:border-indigo-400/40' :
+                color === 'amber' ? 'border-amber-500/20 bg-amber-500/6 hover:border-amber-400/40' :
+                'border-red-500/20 bg-red-500/6 hover:border-red-400/40'
+              }`}
+              aria-pressed={severityFilter === label.toLowerCase()}
+              onClick={() => setSeverityFilter(label.toLowerCase() as EventSeverity)}
+            >
+              <p className={color === 'emerald' ? 'text-2xl font-bold text-emerald-300' : color === 'blue' ? 'text-2xl font-bold text-indigo-200' : color === 'amber' ? 'text-2xl font-bold text-amber-200' : 'text-2xl font-bold text-red-200'}>{count}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-400">{label}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Filters */}

@@ -57,16 +57,30 @@ export function DashboardPage() {
   const recentConversations = API_MODE ? conversations : MOCK_CONVERSATIONS.slice(0, 3);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl">
-      {!API_MODE && <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/15" role="note">
-        <ShieldCheck size={16} className="text-blue-400 flex-shrink-0" />
-        <p className="text-xs text-slate-400">
-          <span className="text-blue-400 font-medium">Demo Mode:</span> Dashboard metrics, chart, security events, and recent conversations are illustrative sample data.
+    <div className="page-shell mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      <div className="cyber-panel relative overflow-hidden rounded-[1.5rem] border border-indigo-500/10 p-5 md:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(91,97,246,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(39,214,206,0.12),_transparent_28%)]" aria-hidden="true" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-indigo-200">Operations overview</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">Threat surface is stable</h2>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/8 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(39,214,206,0.8)]" />
+            Secure session active
+          </div>
+        </div>
+      </div>
+
+      {!API_MODE && <div className="flex items-center gap-3 rounded-2xl border border-indigo-500/15 bg-indigo-500/6 p-3" role="note">
+        <ShieldCheck size={16} className="text-indigo-200 flex-shrink-0" />
+        <p className="text-xs text-slate-300">
+          <span className="font-medium text-indigo-200">Demo Mode:</span> Dashboard metrics, chart, security events, and recent conversations are illustrative sample data.
         </p>
       </div>}
-      {loadError && <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20" role="alert" aria-live="polite">
+      {loadError && <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3" role="alert" aria-live="polite">
         <p className="text-sm text-amber-200">{loadError}</p>
-        <button onClick={() => void loadDashboard()} className="px-3 py-1.5 rounded-lg border border-amber-500/30 text-sm text-amber-200 hover:bg-amber-500/10">Retry</button>
+        <button onClick={() => void loadDashboard()} className="rounded-lg border border-amber-500/30 px-3 py-1.5 text-sm text-amber-200 transition hover:bg-amber-500/10">Retry</button>
       </div>}
 
       {/* Stats Grid */}

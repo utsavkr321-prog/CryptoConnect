@@ -34,7 +34,7 @@ export function SecurityBadge({ type, severity, testStatus, label, size = 'md' }
 
   if (type === 'demo') {
     return (
-      <span className={`inline-flex items-center gap-1 ${padding} rounded-full ${textSize} font-medium bg-blue-500/10 border border-blue-500/30 text-blue-400`}>
+      <span className={`inline-flex items-center gap-1 ${padding} rounded-full ${textSize} font-medium bg-indigo-500/10 border border-indigo-500/25 text-indigo-200`}>
         <Shield size={iconSize} />
         <span>{label ?? 'Demo'}</span>
       </span>
@@ -44,7 +44,7 @@ export function SecurityBadge({ type, severity, testStatus, label, size = 'md' }
   if (type === 'severity' && severity) {
     const config = {
       success: { cls: 'badge-verified', Icon: CheckCircle, label: 'Success' },
-      info: { cls: 'bg-blue-500/10 border border-blue-500/30 text-blue-400', Icon: Shield, label: 'Info' },
+      info: { cls: 'bg-indigo-500/10 border border-indigo-500/25 text-indigo-200', Icon: Shield, label: 'Info' },
       warning: { cls: 'badge-unverified', Icon: AlertTriangle, label: 'Warning' },
       critical: { cls: 'badge-danger', Icon: XCircle, label: 'Critical' },
     }[severity];
@@ -58,8 +58,8 @@ export function SecurityBadge({ type, severity, testStatus, label, size = 'md' }
 
   if (type === 'test-status' && testStatus) {
     const config = {
-      not_run: { cls: 'bg-slate-700/50 border border-slate-600/50 text-slate-400', Icon: Clock, label: 'Not Run' },
-      running: { cls: 'bg-blue-500/10 border border-blue-500/30 text-blue-400', Icon: Shield, label: 'Running' },
+      not_run: { cls: 'bg-slate-700/60 border border-slate-600/60 text-slate-300', Icon: Clock, label: 'Not Run' },
+      running: { cls: 'bg-indigo-500/10 border border-indigo-500/25 text-indigo-200', Icon: Shield, label: 'Running' },
       passed: { cls: 'badge-verified', Icon: CheckCircle, label: 'Passed' },
       failed: { cls: 'badge-danger', Icon: XCircle, label: 'Failed' },
     }[testStatus];

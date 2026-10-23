@@ -38,41 +38,38 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   };
 
   return (
-    <aside className="flex flex-col h-full min-h-0 w-[min(16rem,calc(100vw-2rem))] bg-[#080d1a] border-r border-slate-800/60">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <Shield size={20} className="text-emerald-400" />
+    <aside className="relative flex h-full min-h-0 w-[min(17rem,calc(100vw-2rem))] flex-col border-r border-white/8 bg-[#0a1018]/95 shadow-[12px_0_30px_rgba(2,4,10,0.28)] backdrop-blur-xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(91,97,246,0.12),_transparent_38%)]" aria-hidden="true" />
+
+      <div className="relative px-5 pb-5 pt-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-indigo-500/10 bg-white/2 px-3 py-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 text-indigo-200 shadow-[0_0_24px_rgba(91,97,246,0.25)]">
+            <Shield size={20} />
           </div>
           <div>
-            <h1 className="font-bold text-slate-100 text-base leading-tight">CryptoConnect</h1>
-            <p className="text-xs text-slate-500">Secure Comms Demo</p>
+            <h1 className="text-base font-semibold tracking-[0.08em] text-white">CryptoConnect</h1>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500">secure workspace</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 mb-2">
-          Navigation
-        </p>
-        <ul className="space-y-0.5">
+      <nav className="relative flex-1 overflow-y-auto px-3 py-2">
+        <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500">Navigation</p>
+        <ul className="space-y-1.5">
           {navItems.map(({ to, icon: Icon, label }) => (
             <li key={to}>
               <NavLink
                 to={to}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group
-                  ${isActive ? 'sidebar-item-active' : 'sidebar-item'}`
+                  `group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${isActive ? 'sidebar-item-active' : 'sidebar-item'}`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <Icon size={16} className={isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'} />
+                    <Icon size={16} className={isActive ? 'text-violet-200' : 'text-slate-500 group-hover:text-slate-300'} />
                     <span className="flex-1">{label}</span>
-                    {isActive && <ChevronRight size={12} className="opacity-60" />}
+                    {isActive && <ChevronRight size={12} className="text-violet-200 opacity-80" />}
                   </>
                 )}
               </NavLink>
@@ -81,30 +78,28 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
         </ul>
       </nav>
 
-      {/* Demo Notice */}
-      <div className="px-3 py-3 mx-3 mb-3 rounded-lg bg-blue-500/5 border border-blue-500/15">
-        <div className="flex items-center gap-2 mb-1">
-          <Fingerprint size={12} className="text-blue-400" />
-          <span className="text-xs font-semibold text-blue-400">{API_MODE ? 'API Mode' : 'Demo Mode'}</span>
+      <div className="relative mx-3 mb-3 rounded-2xl border border-indigo-500/12 bg-indigo-500/5 p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <Fingerprint size={12} className="text-indigo-200" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-indigo-200">{API_MODE ? 'API Mode' : 'Demo Mode'}</span>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-xs leading-relaxed text-slate-400">
           {API_MODE ? 'Authenticated backend access. Fingerprint verification is available; messaging is not end-to-end encrypted.' : 'Data is local mock data. No backend messages are sent.'}
         </p>
       </div>
 
-      {/* User profile */}
-      <div className="px-3 pb-4 border-t border-slate-800/60 pt-3">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+      <div className="relative border-t border-white/8 px-3 pb-4 pt-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.02] px-3 py-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 text-sm font-bold text-white">
             {user?.name.charAt(0) ?? 'A'}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-200 truncate">{user?.name ?? 'Demo User'}</p>
-            <p className="text-xs text-slate-500 truncate">{user?.email ?? 'demo@cryptoconnect'}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-slate-100">{user?.name ?? 'Demo User'}</p>
+            <p className="truncate text-[11px] text-slate-500">{user?.email ?? 'demo@cryptoconnect'}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="min-h-11 min-w-11 -mr-2.5 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
             aria-label="Logout"
             title="Log out"
           >
