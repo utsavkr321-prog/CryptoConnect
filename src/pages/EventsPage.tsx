@@ -166,7 +166,7 @@ export function EventsPage() {
       </div>
 
       {/* Event Source Notice */}
-      {!API_MODE && <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/5 border border-blue-500/15">
+      {!API_MODE && <div className="notice-panel notice-panel-blue flex items-start gap-2 p-3 rounded-xl">
         <Info size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-slate-400">
           Events marked <span className="text-emerald-400 font-medium">Real</span> were recorded from local operations during this demo session. Events marked <span className="text-blue-400 font-medium">Simulated</span> are pre-populated sample events or concept simulations.

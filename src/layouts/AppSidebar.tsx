@@ -38,7 +38,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   };
 
   return (
-    <aside className="relative flex h-full min-h-0 w-[min(17rem,calc(100vw-2rem))] flex-col border-r border-white/8 bg-[#0a1018]/95 shadow-[12px_0_30px_rgba(2,4,10,0.28)] backdrop-blur-xl">
+    <aside className="app-sidebar relative flex h-full min-h-0 w-[min(17rem,calc(100vw-2rem))] flex-col border-r">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(91,97,246,0.12),_transparent_38%)]" aria-hidden="true" />
 
       <div className="relative px-5 pb-5 pt-5">

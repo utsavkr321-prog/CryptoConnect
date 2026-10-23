@@ -67,7 +67,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex flex-shrink-0 items-center justify-between border-b border-white/8 bg-[#0a1018]/85 px-4 py-3.5 backdrop-blur-sm md:px-6">
+        <header className="app-header flex flex-shrink-0 items-center justify-between border-b px-4 py-3.5 md:px-6">
           <div className="flex items-center gap-3">
             <button
               ref={menuButtonRef}
@@ -93,7 +93,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain bg-[radial-gradient(circle_at_top,_rgba(91,97,246,0.07),_transparent_30%)]">
+        <main className="app-main flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
           {children}
         </main>
       </div>

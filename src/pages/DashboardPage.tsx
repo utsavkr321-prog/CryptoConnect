@@ -72,13 +72,13 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {!API_MODE && <div className="flex items-center gap-3 rounded-2xl border border-indigo-500/15 bg-indigo-500/6 p-3" role="note">
+      {!API_MODE && <div className="notice-panel notice-panel-violet flex items-center gap-3 rounded-2xl p-3" role="note">
         <ShieldCheck size={16} className="text-indigo-200 flex-shrink-0" />
         <p className="text-xs text-slate-300">
           <span className="font-medium text-indigo-200">Demo Mode:</span> Dashboard metrics, chart, security events, and recent conversations are illustrative sample data.
         </p>
       </div>}
-      {loadError && <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3" role="alert" aria-live="polite">
+      {loadError && <div className="notice-panel notice-panel-warning flex items-center justify-between gap-3 rounded-2xl p-3" role="alert" aria-live="polite">
         <p className="text-sm text-amber-200">{loadError}</p>
         <button onClick={() => void loadDashboard()} className="rounded-lg border border-amber-500/30 px-3 py-1.5 text-sm text-amber-200 transition hover:bg-amber-500/10">Retry</button>
       </div>}
@@ -278,13 +278,7 @@ export function DashboardPage() {
           <button
             key={label}
             onClick={() => navigate(to)}
-            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-150 hover:scale-[1.02] ${
-              color === 'emerald'
-                ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400'
-                : color === 'blue'
-                ? 'bg-blue-500/5 border-blue-500/20 hover:border-blue-500/40 text-blue-400'
-                : 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40 text-amber-400'
-            }`}
+            className={`quick-action quick-action-${color} flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-150`}
           >
             <Icon size={20} />
             <span className="text-xs font-medium text-slate-300">{label}</span>

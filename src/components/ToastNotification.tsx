@@ -10,10 +10,10 @@ const icons = {
 };
 
 const colors = {
-  success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
-  error: 'border-red-500/40 bg-red-500/10 text-red-400',
-  warning: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
-  info: 'border-blue-500/40 bg-blue-500/10 text-blue-400',
+  success: 'border-emerald-500/40 text-emerald-300',
+  error: 'border-red-500/40 text-red-300',
+  warning: 'border-amber-500/40 text-amber-300',
+  info: 'border-blue-500/40 text-blue-300',
 };
 
 function ToastItem({ toast }: { toast: Toast }) {
@@ -22,8 +22,9 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-sm w-full max-w-[380px]
+      className={`toast-surface flex items-start gap-3 px-4 py-3 rounded-xl border shadow-2xl w-full max-w-[380px]
         ${colors[toast.type]} animate-in slide-in-from-right-full duration-300`}
+      data-toast-type={toast.type}
     >
       <Icon size={16} className="mt-0.5 flex-shrink-0" />
       <p className="text-sm flex-1 leading-relaxed">{toast.message}</p>

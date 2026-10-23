@@ -501,7 +501,7 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 overflow-hidden">
+    <div className="chat-workspace flex h-full min-h-0 min-w-0 overflow-hidden">
       {/* Conversation List */}
       <div className={`flex-shrink-0 w-64 xl:w-72 border-r border-slate-800/60 flex flex-col min-h-0 bg-[#080d1a] ${activeId ? 'hidden md:flex' : 'flex w-full'}`}>
         <div className="p-3 border-b border-slate-800/60">
