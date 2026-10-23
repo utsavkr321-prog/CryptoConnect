@@ -24,7 +24,8 @@ public final class ChatDtos {
 
   public enum MessageFormat { TEXT, LEGACY_ENCRYPTED }
 
-  public record ParticipantResponse(UUID id, String name, String keyFingerprint) {}
+  public record ParticipantResponse(UUID id, String name, String keyFingerprint, boolean verified,
+      boolean keyChangedSinceVerification) {}
 
   public record ConversationResponse(UUID id, Instant updatedAt, List<ParticipantResponse> participants,
       long unreadCount, Instant lastMessageAt, boolean hasMessages) {}

@@ -40,7 +40,7 @@ To stop any component safely, switch to its terminal and press `Ctrl+C`.
 
 To run the backend tests, use `mvn test` from `backend/`; the MongoDB integration tests require Docker and start their own disposable MongoDB Testcontainer. To run the backend manually, configure `MONGODB_URI` targeting `cryptoconnect_local_test` and run `scripts/start-local-backend.ps1`. It refuses non-loopback hosts and preserves safety guards.
 
-See [staging deployment preparation](./docs/STAGING_DEPLOYMENT.md), [cryptography](./docs/CRYPTOGRAPHY.md), [architecture](./docs/ARCHITECTURE.md), [API documentation](./docs/API_DOCUMENTATION.md), [implementation status](./docs/IMPLEMENTATION_STATUS.md), [testing](./docs/TESTING.md), and [known limitations](./docs/KNOWN_LIMITATIONS.md).
+See the [features and security guide](./docs/FEATURES_AND_SECURITY_GUIDE.md), [staging deployment preparation](./docs/STAGING_DEPLOYMENT.md), [cryptography](./docs/CRYPTOGRAPHY.md), [architecture](./docs/ARCHITECTURE.md), [API documentation](./docs/API_DOCUMENTATION.md), [implementation status](./docs/IMPLEMENTATION_STATUS.md), [testing](./docs/TESTING.md), and [known limitations](./docs/KNOWN_LIMITATIONS.md).
 
 The backend exposes `/health/live` for process liveness and `/health/ready` for database-backed readiness. Both probes return status only and are intended for local/container orchestration; production deployments must still terminate TLS and restrict diagnostic access at the proxy.
 

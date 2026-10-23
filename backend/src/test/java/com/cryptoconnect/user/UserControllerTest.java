@@ -103,6 +103,16 @@ class UserControllerTest {
     verifyNoInteractions(users);
   }
 
+  @Test void directorySearchRejectsAnInvalidBearerToken() throws Exception {
+    when(jwt.userId("invalid-token")).thenThrow(new IllegalArgumentException("Invalid token"));
+
+    mvc.perform(get("/api/users").param("query", "al")
+            .header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(users);
+  }
+
   @Test void rejectsSingleCharacterQueries() throws Exception {
     mvc.perform(get("/api/users").param("query", "a").with(auth()))
         .andExpect(status().isBadRequest());

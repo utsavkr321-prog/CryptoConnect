@@ -19,6 +19,7 @@ class FriendServiceTest {
 
   @Mock FriendRequestRepository requests;
   @Mock UserRepository users;
+  @Mock ContactRepository contacts;
   @InjectMocks FriendService service;
 
   private final UUID alice = UUID.fromString("01800000-0000-0000-0000-000000000001");
@@ -80,6 +81,10 @@ class FriendServiceTest {
     FriendRequest result = service.decide(bob, pending.getId(), true);
 
     assertEquals(FriendRequest.Status.ACCEPTED, result.getStatus());
+    verify(contacts).save(argThat(contact ->
+        contact.getOwnerId().equals(alice) && contact.getContactId().equals(bob)));
+    verify(contacts).save(argThat(contact ->
+        contact.getOwnerId().equals(bob) && contact.getContactId().equals(alice)));
   }
 
   @Test void recipientCanRejectPendingRequest() {
@@ -90,6 +95,7 @@ class FriendServiceTest {
     FriendRequest result = service.decide(bob, pending.getId(), false);
 
     assertEquals(FriendRequest.Status.REJECTED, result.getStatus());
+    verifyNoInteractions(contacts);
   }
 
   @Test void senderCannotAcceptOwnRequest() {

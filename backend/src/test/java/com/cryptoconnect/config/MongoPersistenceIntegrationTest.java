@@ -87,7 +87,7 @@ class MongoPersistenceIntegrationTest {
     JsonNode beta = registerAndLogin(betaName, "beta-" + suffix + "@example.test", password);
 
     ResponseEntity<JsonNode> alphaFindsBeta = search(alpha.path("token").asText(), "DIRECTORY BETA");
-    ResponseEntity<JsonNode> betaFindsAlpha = search(beta.path("token").asText(), alphaName);
+    ResponseEntity<JsonNode> betaFindsAlpha = search(beta.path("token").asText(), "DIRECTORY AL");
 
     assertEquals(HttpStatus.OK, alphaFindsBeta.getStatusCode());
     assertEquals(beta.path("user").path("id").asText(),
@@ -119,19 +119,64 @@ class MongoPersistenceIntegrationTest {
   @Test
   void findsNormalizedEmailExactlyWithoutExposingEmailAndExcludesPrefixes() {
     String suffix = UUID.randomUUID().toString();
-    String email = "email-search-" + suffix + "@example.test";
-    JsonNode owner = registerAndLogin("Email Search Owner " + suffix, "owner-" + suffix + "@example.test", "valid-test-password-123");
+    String email = "email-search+" + suffix + "@example.test";
+    String ownerEmail = "owner-" + suffix + "@example.test";
+    JsonNode owner = registerAndLogin("Email Search Owner " + suffix, ownerEmail, "valid-test-password-123");
     JsonNode target = registerAndLogin("Email Search Target " + suffix, email, "valid-test-password-123");
 
     ResponseEntity<JsonNode> exact = search(owner.path("token").asText(), "  " + email.toUpperCase() + "  ");
     ResponseEntity<JsonNode> partialAddress = search(owner.path("token").asText(), email.substring(0, email.indexOf('@')) + "@example");
+    ResponseEntity<JsonNode> ownAccount = search(owner.path("token").asText(), ownerEmail);
+    ResponseEntity<JsonNode> unregistered = search(owner.path("token").asText(), "unregistered+" + suffix + "@example.test");
 
     assertEquals(HttpStatus.OK, exact.getStatusCode());
     assertEquals(1, exact.getBody().path("users").size());
     assertEquals(target.path("user").path("id").asText(), exact.getBody().path("users").get(0).path("id").asText());
+    assertEquals(email.toLowerCase(java.util.Locale.ROOT),
+        users.findById(UUID.fromString(target.path("user").path("id").asText())).orElseThrow().getEmail());
     assertFalse(exact.getBody().path("users").get(0).has("email"));
     assertEquals(HttpStatus.OK, partialAddress.getStatusCode());
     assertEquals(0, partialAddress.getBody().path("users").size());
+    assertEquals(HttpStatus.OK, ownAccount.getStatusCode());
+    assertEquals(0, ownAccount.getBody().path("users").size());
+    assertEquals(HttpStatus.OK, unregistered.getStatusCode());
+    assertEquals(0, unregistered.getBody().path("users").size());
+  }
+
+  @Test
+  void verificationRejectsMismatchesUnauthenticatedUsersAndUnrelatedContacts() throws Exception {
+    String suffix = UUID.randomUUID().toString();
+    JsonNode owner = registerAndLogin("Verifier " + suffix, "verify-owner-" + suffix + "@example.test", "valid-test-password-123");
+    JsonNode stranger = registerAndLogin("Stranger " + suffix, "verify-stranger-" + suffix + "@example.test", "valid-test-password-123");
+    User target = users.save(new User("verify-target-" + suffix + "@example.test", "Verification Target", "encoded-password"));
+    String publicKey = generatePublicKey();
+    String fingerprint = KeyEnrollmentService.fingerprintForPublicKeyBytes(java.util.Base64.getDecoder().decode(publicKey));
+    target.setPublicKey(publicKey);
+    target.setKeyFingerprint("not-the-computed-fingerprint");
+    users.save(target);
+
+    UUID ownerId = UUID.fromString(owner.path("user").path("id").asText());
+    contacts.save(new ContactRelationship(ownerId, target.getId()));
+    HttpHeaders ownerHeaders = new HttpHeaders();
+    ownerHeaders.setBearerAuth(owner.path("token").asText());
+    HttpHeaders strangerHeaders = new HttpHeaders();
+    strangerHeaders.setBearerAuth(stranger.path("token").asText());
+    Map<String, Object> matching = Map.of("fingerprint", fingerprint, "confirmed", true);
+    Map<String, Object> mismatching = Map.of("fingerprint", "0".repeat(64), "confirmed", true);
+
+    ResponseEntity<JsonNode> mismatch = http.exchange(
+        "/api/contacts/" + target.getId() + "/verify", HttpMethod.POST,
+        new HttpEntity<>(mismatching, ownerHeaders), JsonNode.class);
+    ResponseEntity<JsonNode> unauthenticated = http.exchange(
+        "/api/contacts/" + target.getId() + "/verify", HttpMethod.POST,
+        new HttpEntity<>(matching, new HttpHeaders()), JsonNode.class);
+    ResponseEntity<JsonNode> unrelated = http.exchange(
+        "/api/contacts/" + target.getId() + "/verify", HttpMethod.POST,
+        new HttpEntity<>(matching, strangerHeaders), JsonNode.class);
+
+    assertEquals(HttpStatus.CONFLICT, mismatch.getStatusCode());
+    assertEquals(HttpStatus.UNAUTHORIZED, unauthenticated.getStatusCode());
+    assertEquals(HttpStatus.NOT_FOUND, unrelated.getStatusCode());
   }
 
   @Test
@@ -187,6 +232,37 @@ class MongoPersistenceIntegrationTest {
 
     assertEquals(HttpStatus.CREATED, first.getStatusCode());
     assertEquals(HttpStatus.CONFLICT, duplicate.getStatusCode());
+  }
+
+  @Test
+  void acceptedFriendRequestsCreateVisibleContactsForBothUsersWithoutVerifyingIdentity() {
+    String suffix = UUID.randomUUID().toString();
+    JsonNode sender = registerAndLogin("Contact Sender " + suffix, "contact-sender-" + suffix + "@example.test", "valid-test-password-123");
+    JsonNode recipient = registerAndLogin("Contact Recipient " + suffix, "contact-recipient-" + suffix + "@example.test", "valid-test-password-123");
+    HttpHeaders senderHeaders = new HttpHeaders();
+    senderHeaders.setBearerAuth(sender.path("token").asText());
+    HttpHeaders recipientHeaders = new HttpHeaders();
+    recipientHeaders.setBearerAuth(recipient.path("token").asText());
+
+    ResponseEntity<JsonNode> sent = http.postForEntity("/api/friend-requests",
+        new HttpEntity<>(Map.of("recipientId", recipient.path("user").path("id").asText()), senderHeaders),
+        JsonNode.class);
+    assertEquals(HttpStatus.CREATED, sent.getStatusCode());
+    ResponseEntity<JsonNode> accepted = http.exchange(
+        "/api/friend-requests/" + sent.getBody().path("id").asText() + "/accept",
+        HttpMethod.POST, new HttpEntity<>(recipientHeaders), JsonNode.class);
+    ResponseEntity<JsonNode> senderContacts = http.exchange(
+        "/api/contacts", HttpMethod.GET, new HttpEntity<>(senderHeaders), JsonNode.class);
+    ResponseEntity<JsonNode> recipientContacts = http.exchange(
+        "/api/contacts", HttpMethod.GET, new HttpEntity<>(recipientHeaders), JsonNode.class);
+
+    assertEquals(HttpStatus.OK, accepted.getStatusCode());
+    assertEquals(sender.path("user").path("id").asText(),
+        recipientContacts.getBody().get(0).path("id").asText());
+    assertEquals(recipient.path("user").path("id").asText(),
+        senderContacts.getBody().get(0).path("id").asText());
+    assertFalse(senderContacts.getBody().get(0).path("verified").asBoolean());
+    assertFalse(recipientContacts.getBody().get(0).path("verified").asBoolean());
   }
 
   @Test

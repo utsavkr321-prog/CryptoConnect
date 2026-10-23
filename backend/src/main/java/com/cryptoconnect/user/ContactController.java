@@ -1,6 +1,5 @@
 package com.cryptoconnect.user;
 
-import com.cryptoconnect.auth.KeyEnrollmentService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -91,7 +90,7 @@ public class ContactController {
     }
     User contact = users.findById(contactId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact user not found"));
-    String fingerprint = currentFingerprint(contact);
+    String fingerprint = ContactVerificationStatus.forContact(contact, null).fingerprint();
     if (fingerprint == null) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "This contact has not enrolled a valid identity key");
     }
@@ -109,21 +108,10 @@ public class ContactController {
   }
 
   private static ContactDtos.ContactResponse response(User user, ContactVerification verification) {
-    String fingerprint = currentFingerprint(user);
-    boolean verified = fingerprint != null && verification != null && fingerprint.equals(verification.getContactKeyFingerprint());
-    boolean keyChangedSinceVerification = verification != null && !verified;
-    return new ContactDtos.ContactResponse(user.getId(), user.getDisplayName(), user.getEmail(), user.getPublicKey(), fingerprint, verified, keyChangedSinceVerification,
-        verified ? verification.getVerifiedAt() : null);
-  }
-
-  private static String currentFingerprint(User user) {
-    if (user.getPublicKey() == null || user.getPublicKey().isBlank()) return null;
-    try {
-      byte[] publicKeyBytes = java.util.Base64.getDecoder().decode(user.getPublicKey());
-      return publicKeyBytes.length == 0 ? null : KeyEnrollmentService.fingerprintForPublicKeyBytes(publicKeyBytes);
-    } catch (IllegalArgumentException malformedKey) {
-      return null;
-    }
+    ContactVerificationStatus.State status = ContactVerificationStatus.forContact(user, verification);
+    return new ContactDtos.ContactResponse(user.getId(), user.getDisplayName(), user.getEmail(), user.getPublicKey(),
+        status.fingerprint(), status.verified(), status.keyChangedSinceVerification(),
+        status.verified() ? verification.getVerifiedAt() : null);
   }
 
   private static String normalizeFingerprint(String value) {

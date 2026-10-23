@@ -1,5 +1,6 @@
 import type { Contact, Conversation, Message, SecurityEvent, DashboardStats, ChartDataPoint, SecurityTest, User, DirectoryUser, FriendRequest } from '../types';
 import { MOCK_CONTACTS, MOCK_CONVERSATIONS, MOCK_SECURITY_EVENTS, MOCK_DASHBOARD_STATS, MOCK_CHART_DATA, INITIAL_SECURITY_TESTS, DEMO_USER } from '../data/mockData';
+import { directorySearchPath, mapDirectoryPage } from './directory';
 
 export const API_MODE = import.meta.env.VITE_APP_MODE === 'api';
 export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8080').replace(/\/$/, '');
@@ -35,18 +36,14 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 type ApiUser = { id: string; email: string; name: string; publicKey?: string; keyFingerprint?: string };
-/** Directory users expose only safe public fields — no email. */
-type ApiDirectoryUser = { id: string; name: string; registeredAt?: string };
-type ApiParticipant = { id: string; name: string; keyFingerprint?: string | null };
-type ApiDirectoryPage = { users: ApiDirectoryUser[]; page: number; hasMore: boolean };
+type ApiParticipant = { id: string; name: string; keyFingerprint?: string | null; verified?: boolean; keyChangedSinceVerification?: boolean };
 type ApiFriendRequest = { id: string; userId: string; name: string; status: string; outgoing: boolean; updatedAt: string };
 type AuthResponse = { token: string; user: ApiUser };
 type ApiConversation = { id: string; updatedAt: string; participants: ApiParticipant[]; unreadCount: number; lastMessageAt?: string | null; hasMessages: boolean };
 type ApiMessage = { id: string; conversationId: string; senderId: string; clientMessageId: string; format: 'TEXT' | 'LEGACY_ENCRYPTED'; content: string | null; createdAt: string; deliveredAt?: string | null; readAt?: string | null };
 
 function mapUser(u: ApiUser): User { return { id: u.id, name: u.name, email: u.email, status: 'unknown', joinedAt: new Date().toISOString(), keyFingerprint: u.keyFingerprint }; }
-function mapParticipant(u: ApiParticipant): Contact { return { id: u.id, name: u.name, status: 'unknown', verified: false, publicKeyFingerprint: u.keyFingerprint ?? 'Not provided', lastSeen: '', addedAt: '' }; }
-function mapDirectoryUser(u: ApiDirectoryUser): DirectoryUser { return { id: u.id, name: u.name, registeredAt: u.registeredAt }; }
+function mapParticipant(u: ApiParticipant): Contact { return { id: u.id, name: u.name, status: 'unknown', verified: u.verified === true, keyChangedSinceVerification: u.keyChangedSinceVerification === true, publicKeyFingerprint: u.keyFingerprint ?? 'Not provided', lastSeen: '', addedAt: '' }; }
 function mapFriendRequest(r: ApiFriendRequest): FriendRequest { return { id: r.id, userId: r.userId, name: r.name, status: r.status as FriendRequest['status'], outgoing: r.outgoing, updatedAt: r.updatedAt }; }
 function storeAuth(response: AuthResponse) { const user = mapUser(response.user); accessToken = response.token; persistAccessToken(response.token); currentUser = user; return user; }
 
@@ -142,9 +139,7 @@ export const contactService: IContactService = {
       });
       return { users: filtered.slice(0, size).map((candidate) => ({ id: candidate.id, name: candidate.name })), hasMore: false };
     }
-    const params = new URLSearchParams({ query: searchValue, page: String(page), size: String(size) });
-    const page_ = await apiRequest<ApiDirectoryPage>(`/api/users?${params.toString()}`, { signal });
-    return { users: page_.users.map(mapDirectoryUser), hasMore: page_.hasMore };
+    return mapDirectoryPage(await apiRequest<unknown>(directorySearchPath(searchValue, page, size), { signal }));
   },
   async addContact(userId) { if (!API_MODE) { const found = mockUserDirectory.find((contact) => contact.id === userId); if (!found) throw new Error('User not found.'); if (mockContactIds.has(found.id)) throw new ApiError(409, 'This user is already a contact.'); mockContactIds.add(found.id); contacts = [...contacts, found]; return found; } return mapApiContact(await apiRequest<ApiContact>('/api/contacts', { method: 'POST', body: JSON.stringify({ userId }) })); },
   async removeContact(userId) { if (!API_MODE) { if (!mockContactIds.delete(userId)) throw new ApiError(404, 'Contact not found.'); contacts = contacts.filter((contact) => contact.id !== userId); return; } await apiRequest<void>(`/api/contacts/${encodeURIComponent(userId)}`, { method: 'DELETE' }); },

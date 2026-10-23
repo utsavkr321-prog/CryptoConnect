@@ -7,8 +7,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service public class FriendService {
-  private final FriendRequestRepository requests; private final UserRepository users;
-  public FriendService(FriendRequestRepository requests, UserRepository users) { this.requests = requests; this.users = users; }
+  private final FriendRequestRepository requests;
+  private final UserRepository users;
+  private final ContactRepository contacts;
+
+  public FriendService(FriendRequestRepository requests, UserRepository users, ContactRepository contacts) {
+    this.requests = requests;
+    this.users = users;
+    this.contacts = contacts;
+  }
   public FriendRequest send(UUID sender, UUID recipient) {
     if (sender.equals(recipient) || !users.existsById(recipient)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recipient is invalid");
     var pair = pair(sender, recipient); var existing = requests.findPair(pair[0], pair[1]);
@@ -23,8 +30,24 @@ import org.springframework.web.server.ResponseStatusException;
     FriendRequest request = requests.findPairById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Friend request not found"));
     if (!request.recipientId().equals(actor)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the recipient may decide this request");
     if (request.getStatus() != FriendRequest.Status.PENDING) throw new ResponseStatusException(HttpStatus.CONFLICT, "Friend request is no longer pending");
-    if (accept) request.accept(); else request.reject(); return requests.save(request);
+    if (accept) {
+      request.accept();
+      FriendRequest accepted = requests.save(request);
+      ensureContact(request.recipientId(), request.getRequestedById());
+      ensureContact(request.getRequestedById(), request.recipientId());
+      return accepted;
+    }
+    request.reject();
+    return requests.save(request);
   }
   public boolean areFriends(UUID first, UUID second) { var pair = pair(first, second); return requests.findPair(pair[0], pair[1]).map(r -> r.getStatus() == FriendRequest.Status.ACCEPTED).orElse(false); }
+  private void ensureContact(UUID ownerId, UUID contactId) {
+    if (contacts.existsByOwnerIdAndContactId(ownerId, contactId)) return;
+    try {
+      contacts.save(new ContactRelationship(ownerId, contactId));
+    } catch (DuplicateKeyException concurrentInsert) {
+      if (!contacts.existsByOwnerIdAndContactId(ownerId, contactId)) throw concurrentInsert;
+    }
+  }
   private static UUID[] pair(UUID first, UUID second) { return first.toString().compareTo(second.toString()) < 0 ? new UUID[] { first, second } : new UUID[] { second, first }; }
 }

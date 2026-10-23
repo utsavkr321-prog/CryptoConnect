@@ -17,7 +17,7 @@ public class SecurityEventService {
       Map.entry("account_created", new EventKind("success", "Account created", "A new account was created.")),
       Map.entry("login_success", new EventKind("success", "Sign-in successful", "Sign-in completed successfully.")),
       Map.entry("login_failure", new EventKind("warning", "Sign-in failed", "A sign-in attempt failed.")),
-      Map.entry("message_sent", new EventKind("info", "Message sent", "Ciphertext was stored for a conversation.")),
+      Map.entry("message_sent", new EventKind("info", "Message sent", "Message text was stored for a conversation.")),
       Map.entry("encryption_success", new EventKind("success", "Encryption completed", "The browser AES-GCM demonstration completed successfully.")),
       Map.entry("decryption_failure", new EventKind("warning", "Decryption failed", "The browser could not authenticate or decrypt the demonstration payload.")),
       Map.entry("tamper_detected", new EventKind("warning", "Tampering detected", "The AES-GCM demonstration rejected a modified ciphertext.")),
@@ -57,6 +57,6 @@ public class SecurityEventService {
 
   private static SecurityEventDtos.EventResponse response(SecurityEventRecord event, EventKind kind) {
     return new SecurityEventDtos.EventResponse(event.getId(), event.getType(), event.getSeverity(),
-        kind.title(), event.getDescription(), event.getCreatedAt(), false);
+        kind.title(), kind.description(), event.getCreatedAt(), false);
   }
 }

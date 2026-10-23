@@ -2,6 +2,9 @@ package com.cryptoconnect.chat;
 
 import com.cryptoconnect.user.User;
 import com.cryptoconnect.user.UserRepository;
+import com.cryptoconnect.user.ContactVerification;
+import com.cryptoconnect.user.ContactVerificationRepository;
+import com.cryptoconnect.user.ContactVerificationStatus;
 import jakarta.validation.Valid;
 import java.util.Comparator;
 import java.util.List;
@@ -24,16 +27,19 @@ public class ChatController {
   private final MemberRepository members;
   private final MessageRepository messages;
   private final UserRepository users;
+  private final ContactVerificationRepository verifications;
   private final ConversationService conversationService;
   private final ChatMessageService chatMessages;
 
   public ChatController(ConversationRepository conversations, MemberRepository members,
-      MessageRepository messages, UserRepository users, ConversationService conversationService,
+      MessageRepository messages, UserRepository users, ContactVerificationRepository verifications,
+      ConversationService conversationService,
       ChatMessageService chatMessages) {
     this.conversations = conversations;
     this.members = members;
     this.messages = messages;
     this.users = users;
+    this.verifications = verifications;
     this.conversationService = conversationService;
     this.chatMessages = chatMessages;
   }
@@ -63,8 +69,7 @@ public class ChatController {
     return ownConversations.stream().map(conversation -> new ChatDtos.ConversationResponse(
         conversation.getId(), conversation.getUpdatedAt(),
         conversation.getParticipantIds().stream().map(usersById::get).filter(java.util.Objects::nonNull)
-            .map(user -> new ChatDtos.ParticipantResponse(user.getId(), user.getDisplayName(),
-                user.getKeyFingerprint())).toList(),
+            .map(user -> participantResponse(user, userId)).toList(),
         messages.countUnreadByConversationAndUser(conversation.getId(), userId), lastMessageAt.get(conversation.getId()),
         lastMessageAt.containsKey(conversation.getId()))).toList();
   }
@@ -93,8 +98,7 @@ public class ChatController {
   private ChatDtos.ConversationResponse response(Conversation conversation, UUID userId) {
     List<ChatDtos.ParticipantResponse> participants = conversation.getParticipantIds().stream()
         .map(users::findById).flatMap(java.util.Optional::stream)
-        .map(user -> new ChatDtos.ParticipantResponse(user.getId(), user.getDisplayName(),
-            user.getKeyFingerprint())).toList();
+        .map(user -> participantResponse(user, userId)).toList();
     long unreadCount = messages.countUnreadByConversationAndUser(conversation.getId(), userId);
     java.time.Instant lastMessageAt = messages.findLatestMessageSummaries(List.of(conversation.getId())).stream()
         .map(LatestMessageSummaryProjection::getCreatedAt).findFirst().orElse(null);
@@ -106,5 +110,13 @@ public class ChatController {
     return new ChatDtos.MessageResponse(message.getId(), message.getConversationId(), message.getSenderId(),
         message.getClientMessageId(), message.getFormat(), message.getContent(), message.getCreatedAt(),
         message.getDeliveredAt(), message.getReadAt());
+  }
+
+  private ChatDtos.ParticipantResponse participantResponse(User contact, UUID ownerId) {
+    ContactVerification verification = contact.getId().equals(ownerId) ? null
+        : verifications.findByOwnerIdAndContactId(ownerId, contact.getId()).orElse(null);
+    ContactVerificationStatus.State status = ContactVerificationStatus.forContact(contact, verification);
+    return new ChatDtos.ParticipantResponse(contact.getId(), contact.getDisplayName(),
+        status.fingerprint(), status.verified(), status.keyChangedSinceVerification());
   }
 }

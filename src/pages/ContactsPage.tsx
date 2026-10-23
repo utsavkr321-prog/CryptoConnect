@@ -200,11 +200,11 @@ function AddContactDialog({ contacts, requests, onClose, onRequestSent }: { cont
     const value = query.trim();
     if (value.length < 2) { setResults([]); setError(''); setSearching(false); return; }
     setResults([]);
+    setError('');
+    setSearching(true);
     let active = true;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      setSearching(true);
-      setError('');
       void contactService.searchUsers(value, 0, 20, controller.signal)
         .then((response) => { if (active) setResults(response.users); })
         .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : 'User search failed.'); })
@@ -270,9 +270,10 @@ function AddContactDialog({ contacts, requests, onClose, onRequestSent }: { cont
           <input id="contact-user-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or email" className="input-field pl-9" autoFocus />
         </div>
         <p className="text-xs text-slate-500 mt-2">Enter at least 2 characters. Names match partially; a full email address matches case-insensitively. Email addresses are never shown in directory results. Friend requests do not verify identity.</p>
+        {!API_MODE && <p className="mt-2 text-xs text-blue-300" role="note">Demo mode: results are sample users only; registered server accounts are not searched.</p>}
         {error && <div className="mt-3 flex items-center justify-between gap-3" role="alert"><p className="text-sm text-red-300">{error}</p><button type="button" onClick={() => setRetryCount((count) => count + 1)} className="text-sm text-indigo-300 underline">Retry</button></div>}
         {searching && <p className="mt-4 text-sm text-slate-400" role="status">Searching users…</p>}
-        {!searching && query.trim().length >= 2 && !error && results.length === 0 && <p className="mt-4 text-sm text-slate-400">No matching registered users.</p>}
+        {!searching && query.trim().length >= 2 && !error && results.length === 0 && <p className="mt-4 text-sm text-slate-400">{API_MODE ? 'No matching registered users.' : 'No matching demo users.'}</p>}
         <div className="mt-3 divide-y divide-slate-800/70">
           {results.map((user) => {
             const alreadyAdded = existingIds.has(user.id);
@@ -377,6 +378,13 @@ export function ContactsPage() {
     try {
       const decided = accept ? await friendService.accept(request.id) : await friendService.reject(request.id);
       setRequests((current) => current.map((item) => item.id === decided.id ? decided : item));
+      if (accept) {
+        try {
+          setContacts(await contactService.getContacts());
+          setLoadError('');
+        }
+        catch (error) { setLoadError(error instanceof Error ? error.message : 'Could not refresh contacts.'); }
+      }
       addToast('success', accept ? `${request.name} is now a friend.` : `Friend request from ${request.name} rejected.`);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Could not update friend request.');

@@ -4,6 +4,8 @@ import com.cryptoconnect.security.SecurityConfig;
 import com.cryptoconnect.security.JwtService;
 import com.cryptoconnect.user.User;
 import com.cryptoconnect.user.UserRepository;
+import com.cryptoconnect.user.ContactVerification;
+import com.cryptoconnect.user.ContactVerificationRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,6 +39,7 @@ class ChatContractTest {
   @MockitoBean MemberRepository members;
   @MockitoBean MessageRepository messages;
   @MockitoBean UserRepository users;
+  @MockitoBean ContactVerificationRepository verifications;
   @MockitoBean ChatMessageService chatMessages;
   @MockitoBean JwtService jwt;
 
@@ -67,16 +70,14 @@ class ChatContractTest {
       .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json("[]"));
 
     verify(conversations).findByParticipantLowIdOrParticipantHighId(stranger, stranger);
-    verifyNoInteractions(users, messages);
+    verifyNoInteractions(users, messages, verifications);
   }
 
   @Test void conversationListUsesAuthenticatedParticipantScopeAndReturnsOnlySafeParticipantFields() throws Exception {
     User owner = new User("owner@example.test", "Owner", "password-hash");
     User contact = new User("contact@example.test", "Contact", "password-hash");
-    owner.setPublicKey("owner-public-key");
-    owner.setKeyFingerprint("OWNER-FINGERPRINT");
-    contact.setPublicKey("contact-public-key");
-    contact.setKeyFingerprint("CONTACT-FINGERPRINT");
+    setIdentityKey(owner);
+    setIdentityKey(contact);
     Conversation ownConversation = Conversation.create(owner.getId(), contact.getId());
     when(conversations.findByParticipantLowIdOrParticipantHighId(owner.getId(), owner.getId())).thenReturn(List.of(ownConversation));
     when(users.findAllById(any())).thenReturn(List.of(owner, contact));
@@ -88,6 +89,8 @@ class ChatContractTest {
       .andExpect(jsonPath("$[0].participants[0].id").exists())
       .andExpect(jsonPath("$[0].participants[0].name").exists())
       .andExpect(jsonPath("$[0].participants[0].keyFingerprint").exists())
+      .andExpect(jsonPath("$[0].participants[0].verified").value(false))
+      .andExpect(jsonPath("$[0].participants[0].keyChangedSinceVerification").value(false))
       .andExpect(jsonPath("$[0].participants[0].email").doesNotExist())
       .andExpect(jsonPath("$[0].participants[0].publicKey").doesNotExist())
       .andExpect(jsonPath("$[0].participants[0].passwordHash").doesNotExist())
@@ -97,13 +100,37 @@ class ChatContractTest {
     verify(conversations).findByParticipantLowIdOrParticipantHighId(owner.getId(), owner.getId());
   }
 
+  @Test void conversationListReturnsVerificationBoundToTheCurrentPublicKey() throws Exception {
+    User owner = new User("owner@example.test", "Owner", "password-hash");
+    User contact = new User("contact@example.test", "Contact", "password-hash");
+    var keyPair = java.security.KeyPairGenerator.getInstance("EC");
+    keyPair.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+    var publicKey = keyPair.generateKeyPair().getPublic().getEncoded();
+    String encodedKey = java.util.Base64.getEncoder().encodeToString(publicKey);
+    String fingerprint = com.cryptoconnect.auth.KeyEnrollmentService.fingerprintForPublicKeyBytes(publicKey);
+    contact.setPublicKey(encodedKey);
+    contact.setKeyFingerprint("stale-or-tampered-value");
+    Conversation ownConversation = Conversation.create(owner.getId(), contact.getId());
+    when(conversations.findByParticipantLowIdOrParticipantHighId(owner.getId(), owner.getId())).thenReturn(List.of(ownConversation));
+    when(users.findAllById(any())).thenReturn(List.of(owner, contact));
+    when(verifications.findByOwnerIdAndContactId(owner.getId(), contact.getId()))
+        .thenReturn(java.util.Optional.of(new ContactVerification(owner.getId(), contact.getId(), fingerprint)));
+
+    mvc.perform(get("/api/conversations")
+        .with(authentication(new UsernamePasswordAuthenticationToken(owner.getId(), null, AuthorityUtils.NO_AUTHORITIES)))
+        .accept(MediaType.APPLICATION_JSON))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$[0].participants[*].verified",
+          org.hamcrest.Matchers.containsInAnyOrder(false, true)))
+      .andExpect(jsonPath("$[0].participants[*].keyFingerprint",
+          org.hamcrest.Matchers.hasItem(fingerprint)));
+  }
+
   @Test void conversationCreationResponseOmitsEmailAndRawKeys() throws Exception {
     User owner = new User("owner@example.test", "Owner", "password-hash");
     User contact = new User("contact@example.test", "Contact", "password-hash");
-    owner.setPublicKey("owner-public-key");
-    owner.setKeyFingerprint("OWNER-FINGERPRINT");
-    contact.setPublicKey("contact-public-key");
-    contact.setKeyFingerprint("CONTACT-FINGERPRINT");
+    setIdentityKey(owner);
+    setIdentityKey(contact);
     Conversation existing = Conversation.create(owner.getId(), contact.getId());
     when(conversationService.openOrCreate(owner.getId(), contact.getId())).thenReturn(new ConversationService.OpenResult(existing, false));
     when(users.findById(owner.getId())).thenReturn(java.util.Optional.of(owner));
@@ -151,6 +178,14 @@ class ChatContractTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content("{\"recipientId\":\"" + recipient + "\"}"))
       .andExpect(status().isCreated());
+  }
+
+  private static void setIdentityKey(User user) throws Exception {
+    var generator = java.security.KeyPairGenerator.getInstance("EC");
+    generator.initialize(new java.security.spec.ECGenParameterSpec("secp256r1"));
+    byte[] encoded = generator.generateKeyPair().getPublic().getEncoded();
+    user.setPublicKey(java.util.Base64.getEncoder().encodeToString(encoded));
+    user.setKeyFingerprint(com.cryptoconnect.auth.KeyEnrollmentService.fingerprintForPublicKeyBytes(encoded));
   }
 
   @Test void nonMemberCannotPostMessage() throws Exception {

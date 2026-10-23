@@ -23,7 +23,7 @@ class SecurityEventServiceTest {
 
     assertEquals("message_sent", response.type());
     assertEquals("Message sent", response.title());
-    assertEquals("Ciphertext was stored for a conversation.", response.description());
+    assertEquals("Message text was stored for a conversation.", response.description());
     assertEquals("info", response.severity());
     org.mockito.ArgumentCaptor<SecurityEventRecord> event = org.mockito.ArgumentCaptor.forClass(SecurityEventRecord.class);
     verify(repository).save(event.capture());
@@ -45,5 +45,16 @@ class SecurityEventServiceTest {
 
     assertEquals(List.of(), service.listForUser(userId));
     verify(repository).findTop100ByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Test void correctsHistoricalMessageEventCopyWhenItIsReturned() {
+    UUID userId = UUID.randomUUID();
+    SecurityEventRecord oldEvent = new SecurityEventRecord(userId, "message_sent", "info",
+        "Ciphertext was stored for a conversation.", java.time.Instant.now());
+    when(repository.findTop100ByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(oldEvent));
+
+    SecurityEventDtos.EventResponse response = service.listForUser(userId).get(0);
+
+    assertEquals("Message text was stored for a conversation.", response.description());
   }
 }

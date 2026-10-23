@@ -4,6 +4,7 @@ import com.cryptoconnect.security.AbuseProtectionInterceptor;
 import com.cryptoconnect.security.JwtService;
 import com.cryptoconnect.security.SecurityConfig;
 import com.cryptoconnect.user.UserRepository;
+import com.cryptoconnect.user.ContactVerificationRepository;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ class ChatMessageRateLimitTest {
   @MockitoBean MemberRepository members;
   @MockitoBean MessageRepository messages;
   @MockitoBean UserRepository users;
+  @MockitoBean ContactVerificationRepository verifications;
   @MockitoBean ChatMessageService chatMessages;
   @MockitoBean JwtService jwt;
 
